@@ -1,0 +1,13 @@
+*
+!*/
+!*.*
+*.a
+*.dll
+*.dylib
+*.exe
+*.so
+.DS_Store
+.idea
+.vscode
+TODO
+leopard.nims
