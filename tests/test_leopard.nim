@@ -549,5 +549,3 @@ suite "Encode + Decode":
         echo "encode error message: " & encodeRes.error.msg
 
       inc i
-
-echo ""
