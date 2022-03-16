@@ -19,6 +19,33 @@ proc genData(outerLen, innerLen: uint): Data =
 var
   initialized = false
 
+suite "Helpers":
+  test "isValid should return false if RS code is nonsensical or is invalid per Leopard-RS":
+    var
+      rsCode = (codeword: 8.uint, data: 5.uint, parity: 1.uint)
+
+    check: not rsCode.isValid
+
+    rsCode = RS(110,10)
+
+    check: not rsCode.isValid
+
+    rsCode = RS(1,1)
+
+    check: not rsCode.isValid
+
+    rsCode = (codeword: 2.uint, data: 0.uint, parity: 2.uint)
+
+    check: not rsCode.isValid
+
+    rsCode = RS(2,2)
+
+    check: not rsCode.isValid
+
+    rsCode = RS(65537,65409)
+
+    check: not rsCode.isValid
+
 suite "Initialization":
   test "encode and decode should fail if Leopard-RS is not initialized":
     let
@@ -53,7 +80,7 @@ suite "Initialization":
     check: initialized
 
 suite "Encoder":
-  test "should fail if RS code is nonsensical or is so per Leopard-RS":
+  test "should fail if RS code is nonsensical or is invalid per Leopard-RS":
     check: initialized
     if not initialized: return
 
@@ -61,25 +88,9 @@ suite "Encoder":
       symbolBytes = MinBufferSize
 
     var
-      rsCode = RS(5,5)
+      rsCode = RS(110,10)
       data = genData(rsCode.data, symbolBytes)
       encodeRes = rsCode.encode data
-
-    check: encodeRes.isErr
-    if encodeRes.isErr:
-      check: encodeRes.error.code == LeopardBadCode
-
-    rsCode = RS(5,10)
-    data = genData(rsCode.data, symbolBytes)
-    encodeRes = rsCode.encode data
-
-    check: encodeRes.isErr
-    if encodeRes.isErr:
-      check: encodeRes.error.code == LeopardBadCode
-
-    rsCode = RS(110,10)
-    data = genData(rsCode.data, symbolBytes)
-    encodeRes = rsCode.encode data
 
     check: encodeRes.isErr
     if encodeRes.isErr:
@@ -185,7 +196,7 @@ suite "Encoder":
     check: encodeRes.isOk
 
 suite "Decoder":
-  test "should fail if RS code is nonsensical or is so per Leopard-RS":
+  test "should fail if RS code is nonsensical or is invalid per Leopard-RS":
     check: initialized
     if not initialized: return
 
@@ -193,26 +204,10 @@ suite "Decoder":
       symbolBytes = MinBufferSize
 
     var
-      rsCode = RS(5,5)
+      rsCode = RS(110,10)
       data = genData(rsCode.data, symbolBytes)
       parityData: ParityData
       decodeRes = rsCode.decode(data, parityData, symbolBytes)
-
-    check: decodeRes.isErr
-    if decodeRes.isErr:
-      check: decodeRes.error.code == LeopardBadCode
-
-    rsCode = RS(5,10)
-    data = genData(rsCode.data, symbolBytes)
-    decodeRes = rsCode.decode(data, parityData, symbolBytes)
-
-    check: decodeRes.isErr
-    if decodeRes.isErr:
-      check: decodeRes.error.code == LeopardBadCode
-
-    rsCode = RS(110,10)
-    data = genData(rsCode.data, symbolBytes)
-    decodeRes = rsCode.decode(data, parityData, symbolBytes)
 
     check: decodeRes.isErr
     if decodeRes.isErr:

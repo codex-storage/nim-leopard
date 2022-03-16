@@ -16,6 +16,8 @@ const
   LeopardNotEnoughDataMsg = "Buffer counts are too low"
 
   MinBufferSize* = 64.uint
+  MinSymbols* = 1.uint
+  MaxTotalSymbols* = 65536.uint
 
 type
   Data* = seq[seq[byte]]
@@ -61,11 +63,17 @@ type
 # data symbols     = 239
 # parity symbols   = 255 - 239 = 16
 
+func isValid*(code: ReedSolomonCode): bool =
+  not ((code.codeword - code.data != code.parity) or
+       (code.parity > code.data) or (code.codeword < MinSymbols + 1) or
+       (code.data < MinSymbols) or (code.parity < MinSymbols) or
+       (code.codeword > MaxTotalSymbols))
+
 proc RS*(codeword, data: Positive): ReedSolomonCode =
   var
     parity = codeword - data
 
-  if parity <= 0: parity = 0
+  if parity < 0: parity = 0
   (codeword: codeword.uint, data: data.uint, parity: parity.uint)
 
 when (NimMajor, NimMinor, NimPatch) < (1, 4, 0):
@@ -116,7 +124,7 @@ proc leoInit*() =
 
 proc encode*(code: ReedSolomonCode, data: Data):
     Result[ParityData, LeopardError] =
-  if code.parity < 1 or code.parity > code.data:
+  if not code.isValid:
     return err LeopardError(code: LeopardBadCode, msg: LeopardBadCodeMsg)
 
   var
@@ -194,7 +202,7 @@ proc encode*(code: ReedSolomonCode, data: Data):
 
 proc decode*(code: ReedSolomonCode, data: Data, parityData: ParityData,
     symbolBytes: uint): Result[Data, LeopardError] =
-  if code.parity < 1 or code.parity > code.data:
+  if not code.isValid:
     return err LeopardError(code: LeopardBadCode, msg: LeopardBadCodeMsg)
 
   var
