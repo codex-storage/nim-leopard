@@ -9,11 +9,62 @@ Nim wrapper for [Leopard-RS](https://github.com/catid/leopard): a fast library f
 
 ## Usage
 
-TODO
+```nim
+import leopard
+
+# Initialize Leopard-RS
+leoInit()
+
+var
+  N: Positive
+  data: seq[seq[byte]]
+
+# RS(256,239) :: 239 data symbols, 17 parity symbols
+
+assert RS(256,239).code == 239
+assert RS(256,239).parity == 17
+
+# Choose some N
+N = 1
+# For RS(256,239) fill data such that
+assert data.len == 239
+for i in data: assert i.len == N * 64
+
+# Encode
+let
+  parityData = RS(256,239).encode data
+
+assert parityData.isOk
+assert parityData.get.len == 17
+
+# Poke up to 17 holes total in data and parityData
+var
+  daWithHoles = data
+  paWithHoles = parityData.get
+
+daWithHoles[9]   = @[]
+daWithHoles[53]  = @[]
+daWithHoles[208] = @[]
+# ...
+paWithHoles[1] = @[]
+paWithHoles[4] = @[]
+# ...
+
+# Decode
+let
+  recoveredData = RS(256,239).decode(daWithHoles, paWithHoles, (N * 64).uint)
+
+if recoveredData.isOk:
+  assert recoveredData.get == data
+  assert recoveredData.get != daWithHoles
+else:
+  # More than 17 holes were poked
+  assert recoveredData.error.code == LeopardNeedMoreData
+```
 
 ## Versioning
 
-nim-leopard generally follows the upstream master branch.
+nim-leopard generally follows the upstream `master` branch such that changes there will result in a version bump for this package.
 
 ## Stability
 
