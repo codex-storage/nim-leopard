@@ -1,10 +1,9 @@
-import pkg/stew/ptrops
 import pkg/stew/results
 import pkg/upraises
 
 import ./leopard/wrapper
 
-export results
+export LEO_ALIGN_BYTES, results
 
 push: {.upraises: [].}
 
@@ -57,7 +56,7 @@ type
 # workaround for https://github.com/nim-lang/Nim/issues/19619
 # necessary for use of nim-leopard in nimbus-build-system projects because nbs
 # ships libbacktrace by default
-proc `$`*(err: LeopardError): string {.noSideEffect.} =
+proc `$`*(err: LeopardError): string {.nosideeffect.} =
   $err
 
 # https://github.com/catid/leopard/issues/12
@@ -82,47 +81,56 @@ func isValid*(code: ReedSolomonCode): bool =
        (code.data < MinSymbols) or (code.parity < MinSymbols) or
        (code.codeword > MaxTotalSymbols))
 
-when (NimMajor, NimMinor, NimPatch) < (1, 4, 0):
-  const
-    header = "<stdlib.h>"
+# alloc/freeAligned and helpers adapted from mratsim/weave:
+# https://github.com/mratsim/weave/blob/master/weave/memory/allocs.nim
 
-  proc c_malloc(size: csize_t): pointer {.importc: "malloc", header: header.}
-  proc c_free(p: pointer) {.importc: "free", header: header.}
+func isPowerOfTwo(n: int): bool {.inline.} =
+  (n and (n - 1)) == 0
 
-proc SIMDSafeAllocate(size: int): pointer {.inline.}  =
-  var
-    data =
-      when (NimMajor, NimMinor, NimPatch) < (1, 4, 0):
-        c_malloc(LEO_ALIGN_BYTES + size.uint)
-      else:
-        allocShared(LEO_ALIGN_BYTES + size.uint)
+func roundNextMultipleOf(x, n: Natural): int {.inline.} =
+  (x + n - 1) and not (n - 1)
 
-    doffset = cast[uint](data) mod LEO_ALIGN_BYTES
+when defined(windows):
+  proc aligned_alloc_windows(size, alignment: csize_t): pointer
+    {.header: "<malloc.h>", importc: "_aligned_malloc", sideeffect.}
 
-  data = offset(data, (LEO_ALIGN_BYTES + doffset).int)
+  proc aligned_free_windows(p: pointer)
+    {.header: "<malloc.h>", importc: "_aligned_free", sideeffect.}
 
-  var
-    offsetPtr = cast[pointer](cast[uint](data) - 1)
+  proc freeAligned*(p: pointer) =
+    if not p.isNil:
+      aligned_free_windows(p)
 
-  moveMem(offsetPtr, addr doffset, sizeof(doffset))
-  data
+elif defined(osx):
+  proc posix_memalign(mem: var pointer, alignment, size: csize_t)
+    {.header: "<stdlib.h>", importc, sideeffect.}
 
-proc SIMDSafeFree(data: pointer) {.inline.} =
-  var
-    data = data
+  proc aligned_alloc(alignment, size: csize_t): pointer {.inline.} =
+    posix_memalign(result, alignment, size)
 
-  if not data.isNil:
-    let
-      offset = cast[uint](data) - 1
+else:
+  proc aligned_alloc(alignment, size: csize_t): pointer
+    {.header: "<stdlib.h>", importc, sideeffect.}
 
-    if offset >= LEO_ALIGN_BYTES: return
+when not defined(windows):
+  proc c_free(p: pointer) {.header: "<stdlib.h>", importc: "free".}
 
-    data = cast[pointer](cast[uint](data) - (LEO_ALIGN_BYTES - offset))
+  proc freeAligned*(p: pointer) {.inline.} =
+    if not p.isNil:
+      c_free(p)
 
-    when (NimMajor, NimMinor, NimPatch) < (1, 4, 0):
-      c_free data
-    else:
-      deallocShared data
+proc allocAligned*(size: int, alignment: static Natural): pointer {.inline.} =
+  ## aligned_alloc requires allocating in multiple of the alignment.
+  static:
+    assert alignment.isPowerOfTwo()
+
+  let
+    requiredMem = size.roundNextMultipleOf(alignment)
+
+  when defined(windows):
+    aligned_alloc_windows(csize_t requiredMem, csize_t alignment)
+  else:
+    aligned_alloc(csize_t alignment, csize_t requiredMem)
 
 proc leoInit*() =
   if wrapper.leoInit() != 0:
@@ -156,18 +164,18 @@ proc encode*(code: ReedSolomonCode, data: Data):
 
   for i in 0..<code.data:
     if data[i].len != symbolBytes:
-      for i in 0..<code.data: SIMDSafeFree enData[i]
+      for i in 0..<code.data: freeAligned enData[i]
       return err LeopardError(code: LeopardInconsistentSize,
         msg: LeopardInconsistentSizeMsg)
 
-    enData[i] = SIMDSafeAllocate symbolBytes
+    enData[i] = allocAligned(symbolBytes, LEO_ALIGN_BYTES)
     moveMem(enData[i], addr data[i][0], symbolBytes)
 
   let
     workCount = leoEncodeWorkCount(code.data.cuint, code.parity.cuint)
 
   if workCount == 0:
-    for i in 0..<code.data: SIMDSafeFree enData[i]
+    for i in 0..<code.data: freeAligned enData[i]
     return err LeopardError(code: LeopardInvalidInput,
       msg: $leoResultString(wrapper.LeopardInvalidInput))
 
@@ -175,7 +183,7 @@ proc encode*(code: ReedSolomonCode, data: Data):
     workData = newSeq[pointer](workCount)
 
   for i in 0..<workCount:
-    workData[i] = SIMDSafeAllocate symbolBytes
+    workData[i] = allocAligned(symbolBytes, LEO_ALIGN_BYTES)
 
   let
     encodeRes = leoEncode(
@@ -188,8 +196,8 @@ proc encode*(code: ReedSolomonCode, data: Data):
     )
 
   if encodeRes != wrapper.LeopardSuccess:
-    for i in 0..<code.data: SIMDSafeFree enData[i]
-    for i in 0..<workCount: SIMDSafeFree workData[i]
+    for i in 0..<code.data: freeAligned enData[i]
+    for i in 0..<workCount: freeAligned workData[i]
     return err LeopardError(code: cast[LeopardResult](encodeRes),
       msg: $leoResultString(encodeRes))
 
@@ -201,8 +209,8 @@ proc encode*(code: ReedSolomonCode, data: Data):
     newSeq(parityData[i], symbolBytes)
     moveMem(addr parityData[i][0], workData[i], symbolBytes)
 
-  for i in 0..<code.data: SIMDSafeFree enData[i]
-  for i in 0..<workCount: SIMDSafeFree workData[i]
+  for i in 0..<code.data: freeAligned enData[i]
+  for i in 0..<workCount: freeAligned workData[i]
 
   ok parityData
 
@@ -242,18 +250,18 @@ proc decode*(code: ReedSolomonCode, data: Data, parityData: ParityData,
   for i in 0..<code.data:
     if data[i].len != 0:
       if data[i].len != symbolBytes.int:
-        for i in 0..<code.data: SIMDSafeFree deData[i]
+        for i in 0..<code.data: freeAligned deData[i]
         return err LeopardError(code: LeopardInconsistentSize,
           msg: LeopardInconsistentSizeMsg)
 
-      deData[i] = SIMDSafeAllocate symbolBytes.int
+      deData[i] = allocAligned(symbolBytes.int, LEO_ALIGN_BYTES)
       moveMem(deData[i], addr data[i][0], symbolBytes)
 
     else:
       holes.add i.int
 
   if holes.len == 0:
-    for i in 0..<code.data: SIMDSafeFree deData[i]
+    for i in 0..<code.data: freeAligned deData[i]
     return ok data
 
   var
@@ -262,20 +270,20 @@ proc decode*(code: ReedSolomonCode, data: Data, parityData: ParityData,
   for i in 0..<code.parity:
     if parityData[i].len != 0:
       if parityData[i].len != symbolBytes.int:
-        for i in 0..<code.data: SIMDSafeFree deData[i]
-        for i in 0..<code.parity: SIMDSafeFree paData[i]
+        for i in 0..<code.data: freeAligned deData[i]
+        for i in 0..<code.parity: freeAligned paData[i]
         return err LeopardError(code: LeopardInconsistentSize,
           msg: LeopardInconsistentSizeMsg)
 
-      paData[i] = SIMDSafeAllocate symbolBytes.int
+      paData[i] = allocAligned(symbolBytes.int, LEO_ALIGN_BYTES)
       moveMem(paData[i], addr parityData[i][0], symbolBytes)
 
   let
     workCount = leoDecodeWorkCount(code.data.cuint, code.parity.cuint)
 
   if workCount == 0:
-    for i in 0..<code.data: SIMDSafeFree deData[i]
-    for i in 0..<code.parity: SIMDSafeFree paData[i]
+    for i in 0..<code.data: freeAligned deData[i]
+    for i in 0..<code.parity: freeAligned paData[i]
     return err LeopardError(code: LeopardInvalidInput,
       msg: $leoResultString(wrapper.LeopardInvalidInput))
 
@@ -283,7 +291,7 @@ proc decode*(code: ReedSolomonCode, data: Data, parityData: ParityData,
     workData = newSeq[pointer](workCount)
 
   for i in 0..<workCount:
-    workData[i] = SIMDSafeAllocate symbolBytes.int
+    workData[i] = allocAligned(symbolBytes.int, LEO_ALIGN_BYTES)
 
   let
     decodeRes = leoDecode(
@@ -297,9 +305,9 @@ proc decode*(code: ReedSolomonCode, data: Data, parityData: ParityData,
     )
 
   if decodeRes != wrapper.LeopardSuccess:
-    for i in 0..<code.data: SIMDSafeFree deData[i]
-    for i in 0..<code.parity: SIMDSafeFree paData[i]
-    for i in 0..<workCount: SIMDSafeFree workData[i]
+    for i in 0..<code.data: freeAligned deData[i]
+    for i in 0..<code.parity: freeAligned paData[i]
+    for i in 0..<workCount: freeAligned workData[i]
     return err LeopardError(code: cast[LeopardResult](decodeRes),
       msg: $leoResultString(decodeRes))
 
@@ -314,8 +322,8 @@ proc decode*(code: ReedSolomonCode, data: Data, parityData: ParityData,
   for i in holes:
     data[i] = recoveredData[i]
 
-  for i in 0..<code.data: SIMDSafeFree deData[i]
-  for i in 0..<code.parity: SIMDSafeFree paData[i]
-  for i in 0..<workCount: SIMDSafeFree workData[i]
+  for i in 0..<code.data: freeAligned deData[i]
+  for i in 0..<code.parity: freeAligned paData[i]
+  for i in 0..<workCount: freeAligned workData[i]
 
   ok data
