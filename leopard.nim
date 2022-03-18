@@ -47,19 +47,18 @@ type
     LeopardNeedMoreData     = wrapper.LeopardNeedMoreData
     LeopardSuccess          = wrapper.LeopardSuccess
 
-  # Regardless of comment above, if LeopardError is `object of CatchableError`
-  # there seems to be a weird edge case, possibly owing to the LeopardResult
-  # enum starting with a negative number, whereby there is a compile-time error
-  # on Linux and Windows (but not macOS) re: stew/results in the context of a
-  # nimbus-build-system project; that error is not encountered in a
-  # choosenim/nimble setup using Nim 1.2, 1.4, or 1.6.
-  LeopardError* = object # of CatchableError
+  LeopardError* = object of CatchableError
     code*: LeopardResult
-    msg*: string
 
   ParityData* = Data
 
   ReedSolomonCode* = tuple[codeword, data, parity: uint] # symbol counts
+
+# workaround for https://github.com/nim-lang/Nim/issues/19619
+# necessary for use of nim-leopard in nimbus-build-system projects because nbs
+# ships libbacktrace by default
+proc `$`*(err: LeopardError): string {.noSideEffect.} =
+  $err
 
 # https://github.com/catid/leopard/issues/12
 # https://www.cs.cmu.edu/~guyb/realworld/reedsolomon/reed_solomon_codes.html
@@ -70,18 +69,18 @@ type
 # data symbols     = 239
 # parity symbols   = 255 - 239 = 16
 
-func isValid*(code: ReedSolomonCode): bool =
-  not ((code.codeword - code.data != code.parity) or
-       (code.parity > code.data) or (code.codeword < MinSymbols + 1) or
-       (code.data < MinSymbols) or (code.parity < MinSymbols) or
-       (code.codeword > MaxTotalSymbols))
-
 proc RS*(codeword, data: Positive): ReedSolomonCode =
   var
     parity = codeword - data
 
   if parity < 0: parity = 0
   (codeword: codeword.uint, data: data.uint, parity: parity.uint)
+
+func isValid*(code: ReedSolomonCode): bool =
+  not ((code.codeword - code.data != code.parity) or
+       (code.parity > code.data) or (code.codeword < MinSymbols + 1) or
+       (code.data < MinSymbols) or (code.parity < MinSymbols) or
+       (code.codeword > MaxTotalSymbols))
 
 when (NimMajor, NimMinor, NimPatch) < (1, 4, 0):
   const
