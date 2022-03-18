@@ -47,8 +47,15 @@ type
     LeopardNeedMoreData     = wrapper.LeopardNeedMoreData
     LeopardSuccess          = wrapper.LeopardSuccess
 
-  LeopardError* = object of CatchableError
+  # Regardless of comment above, if LeopardError is `object of CatchableError`
+  # there seems to be a weird edge case, possibly owing to the LeopardResult
+  # enum starting with a negative number, whereby there is a compile-time error
+  # on Linux and Windows (but not macOS) re: stew/results in the context of a
+  # nimbus-build-system project; that error is not encountered in a
+  # choosenim/nimble setup using Nim 1.2, 1.4, or 1.6.
+  LeopardError* = object # of CatchableError
     code*: LeopardResult
+    msg*: string
 
   ParityData* = Data
 
