@@ -138,7 +138,7 @@ nim-leopard generally follows the upstream `master` branch such that changes the
 
 ## Stability
 
-The API provided by this package is currently marked as experimental. Until it is marked as stable, it may be subject to breaking changes across any version bump.
+This package is currently marked as experimental. Until it is marked as stable, it may be subject to breaking changes across any version bump.
 
 ## License
 
