@@ -82,48 +82,6 @@ func isValid*(code: ReedSolomonCode): bool =
        (code.data < MinSymbols) or (code.parity < MinSymbols) or
        (code.codeword > MaxTotalSymbols))
 
-when (NimMajor, NimMinor, NimPatch) < (1, 4, 0):
-  const
-    header = "<stdlib.h>"
-
-  proc c_malloc(size: csize_t): pointer {.importc: "malloc", header: header.}
-  proc c_free(p: pointer) {.importc: "free", header: header.}
-
-proc SIMDSafeAllocate(size: int): pointer {.inline.}  =
-  var
-    data =
-      when (NimMajor, NimMinor, NimPatch) < (1, 4, 0):
-        c_malloc(LEO_ALIGN_BYTES + size.uint)
-      else:
-        allocShared(LEO_ALIGN_BYTES + size.uint)
-
-    doffset = cast[uint](data) mod LEO_ALIGN_BYTES
-
-  data = offset(data, (LEO_ALIGN_BYTES + doffset).int)
-
-  var
-    offsetPtr = cast[pointer](cast[uint](data) - 1)
-
-  moveMem(offsetPtr, addr doffset, sizeof(doffset))
-  data
-
-proc SIMDSafeFree(data: pointer) {.inline.} =
-  var
-    data = data
-
-  if not data.isNil:
-    let
-      offset = cast[uint](data) - 1
-
-    if offset >= LEO_ALIGN_BYTES: return
-
-    data = cast[pointer](cast[uint](data) - (LEO_ALIGN_BYTES - offset))
-
-    when (NimMajor, NimMinor, NimPatch) < (1, 4, 0):
-      c_free data
-    else:
-      deallocShared data
-
 proc leoInit*() =
   if wrapper.leoInit() != 0:
     raise (ref LeopardDefect)(msg: "Leopard-RS failed to initialize")

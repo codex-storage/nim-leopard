@@ -57,9 +57,8 @@
 ## Conference on File and Storage Technologies, San Jose, 2013
 
 
-import upraises
+import pkg/upraises
 push: {.upraises: [].}
-
 
 ## -----------------------------------------------------------------------------
 ## Build configuration
@@ -150,144 +149,141 @@ static:
 
 {.pragma: leo, cdecl, header: LeopardHeader.}
 
-
-## -----------------------------------------------------------------------------
-## Library version
-
-var LEO_VERSION* {.header: LeopardHeader, importc.}: int
-
-
-## -----------------------------------------------------------------------------
-## Platform/Architecture
-
-# maybe should detect AVX2 and set to 32 if detected, 16 otherwise:
-# https://github.com/catid/leopard/blob/master/LeopardCommon.h#L247-L253
-# https://github.com/mratsim/Arraymancer/blob/master/src/arraymancer/laser/cpuinfo_x86.nim#L220
-const LEO_ALIGN_BYTES* = 16
-
-
-## -----------------------------------------------------------------------------
-## Initialization API
-
-## leoInit()
-##
-## Perform static initialization for the library, verifying that the platform
-## is supported.
-##
-## Returns 0 on success and other values on failure.
-
 proc leoInit*(): cint {.leo, importcpp: "leo_init".}
 
+## ------------------------------------------------------------------------------
+##  Shared Constants / Datatypes
+##  Results
 
-## -----------------------------------------------------------------------------
-## Shared Constants / Datatypes
-
-## Results
+# TODO: For some reason it's only possibly to use the enum with `ord`
 type
   LeopardResult* = enum
-    LeopardCallInitialize = -7.cint ## Call leoInit() first
-    LeopardPlatform       = -6.cint ## Platform is unsupported
-    LeopardInvalidInput   = -5.cint ## A function parameter was invalid
-    LeopardInvalidCounts  = -4.cint ## Invalid counts provided
-    LeopardInvalidSize    = -3.cint ## Buffer size must be multiple of 64 bytes
-    LeopardTooMuchData    = -2.cint ## Buffer counts are too high
-    LeopardNeedMoreData   = -1.cint ## Not enough recovery data received
-    LeopardSuccess        =  0.cint ## Operation succeeded
-
-## Convert Leopard result to string
-func leoResultString*(res: LeopardResult): cstring
-  {.leo, importc: "leo_result_string".}
+    LeopardCallInitialize = -7, ##  Call leo_init() first
+    LeopardPlatform = -6,       ##  Platform is unsupported
+    LeopardInvalidInput = -5,   ##  A function parameter was invalid
+    LeopardInvalidCounts = -4,  ##  Invalid counts provided
+    LeopardInvalidSize = -3,    ##  Buffer size must be a multiple of 64 bytes
+    LeopardTooMuchData = -2,    ##  Buffer counts are too high
+    LeopardNeedMoreData = -1,   ##  Not enough recovery data received
+    LeopardSuccess = 0          ##  Operation succeeded
 
 
-## -----------------------------------------------------------------------------
-## Encoder API
+##  Convert Leopard result to string
 
-## leoEncodeWorkCount()
+proc leoResultString*(result: LeopardResult): cstring {.leo, importc: "leo_result_string".}
+## ------------------------------------------------------------------------------
+##  Encoder API
 ##
-## Calculate the number of work data buffers to provide to leoEncode().
+##     leo_encode_work_count()
 ##
-## The sum of originalCount + recoveryCount must not exceed 65536.
+##     Calculate the number of work_data buffers to provide to leo_encode().
 ##
-## Returns the workCount value to pass into leoEncode().
-## Returns 0 on invalid input.
+##     The sum of original_count + recovery_count must not exceed 65536.
+##
+##     Returns the work_count value to pass into leo_encode().
+##     Returns 0 on invalid input.
+##
 
-func leoEncodeWorkCount*(originalCount, recoveryCount: cuint): cuint
+proc leoEncodeWorkCount*(originalCount: cuint; recoveryCount: cuint): cuint
   {.leo, importc: "leo_encode_work_count".}
-
-## leoEncode()
 ##
-## Generate recovery data.
+##     leo_encode()
 ##
-## bufferBytes:   Number of bytes in each data buffer.
-## originalCount: Number of original data buffers provided.
-## recoveryCount: Number of desired recovery data buffers.
-## workCount:     Number of work data buffers, from leoEncodeWorkCount().
-## originalData:  Array of pointers to original data buffers.
-## workData:      Array of pointers to work data buffers.
+##     Generate recovery data.
 ##
-## The sum of originalCount + recoveryCount must not exceed 65536.
-## The recoveryCount <= originalCount.
+##     original_count: Number of original_data[] buffers provided.
+##     recovery_count: Number of desired recovery data buffers.
+##     buffer_bytes:   Number of bytes in each data buffer.
+##     original_data:  Array of pointers to original data buffers.
+##     work_count:     Number of work_data[] buffers, from leo_encode_work_count().
+##     work_data:      Array of pointers to work data buffers.
 ##
-## The value of bufferBytes must be a multiple of 64.
-## Each buffer should have the same number of bytes.
-## Even the last piece must be rounded up to the block size.
+##     The sum of original_count + recovery_count must not exceed 65536.
+##     The recovery_count <= original_count.
 ##
-## Returns LeopardSuccess on success.
-## The first set of recoveryCount buffers in workData will be the result.
-## Returns other values on errors.
+##     The buffer_bytes must be a multiple of 64.
+##     Each buffer should have the same number of bytes.
+##     Even the last piece must be rounded up to the block size.
+##
+##     Let buffer_bytes = The number of bytes in each buffer:
+##
+##         original_count = static_cast<unsigned>(
+##             ((uint64_t)total_bytes + buffer_bytes - 1) / buffer_bytes);
+##
+##     Or if the number of pieces is known:
+##
+##         buffer_bytes = static_cast<unsigned>(
+##             ((uint64_t)total_bytes + original_count - 1) / original_count);
+##
+##     Returns Leopard_Success on success.
+##  The first set of recovery_count buffers in work_data will be the result.
+##     Returns other values on errors.
+##
 
 proc leoEncode*(
-  bufferBytes: uint64,   ## Number of bytes in each data buffer
-  originalCount: cuint,  ## Number of originalData[] buffer pointers
-  recoveryCount: cuint,  ## Number of recovery data buffer pointers
-                         ## (readable post-call from start of workData[])
-  workCount: cuint,      ## Number of workData[] buffer pointers
-  originalData: pointer, ## Array of pointers to original data buffers
-  workData: pointer,     ## Array of pointers to work data buffers
-): LeopardResult {.leo, importc: "leo_encode".}
+  bufferBytes: uint64;
+  originalCount: cuint;
+  recoveryCount: cuint;
+  workCount: cuint;
+  originalData: ptr pointer;
+  workData: ptr pointer): LeopardResult {.leo, importc: "leo_encode".}
+  ##  Number of bytes in each data buffer
+  ##  Number of original_data[] buffer pointers
+  ##  Number of recovery_data[] buffer pointers
+  ##  Number of work_data[] buffer pointers, from leo_encode_work_count()
+  ##  Array of pointers to original data buffers
+  ##
 
-
-## -----------------------------------------------------------------------------
-## Decoder API
-
-## leoDecodeWorkCount()
+##  Array of work buffers
+## ------------------------------------------------------------------------------
+##  Decoder API
 ##
-## Calculate the number of work data buffers to provide to leoDecode().
+##     leo_decode_work_count()
 ##
-## The sum of originalCount + recoveryCount must not exceed 65536.
+##     Calculate the number of work_data buffers to provide to leo_decode().
 ##
-## Returns the workCount value to pass into leoDecode().
-## Returns 0 on invalid input.
+##     The sum of original_count + recovery_count must not exceed 65536.
+##
+##     Returns the work_count value to pass into leo_encode().
+##     Returns 0 on invalid input.
+##
 
-func leoDecodeWorkCount*(originalCount, recoveryCount: cuint): cuint
+proc leoDecodeWorkCount*(originalCount: cuint; recoveryCount: cuint): cuint
   {.leo, importc: "leo_decode_work_count".}
-
-## leoDecode()
 ##
-## Decode original data from recovery data.
+##     leo_decode()
 ##
-## bufferBytes:   Number of bytes in each data buffer.
-## originalCount: Number of original data buffers provided.
-## recoveryCount: Number of recovery data buffers provided.
-## workCount:     Number of work data buffers, from leoDecodeWorkCount().
-## originalData:  Array of pointers to original data buffers.
-## recoveryData:  Array of pointers to recovery data buffers.
-## workData:      Array of pointers to work data buffers.
+##     Decode original data from recovery data.
 ##
-## Lost original/recovery data should be set to NULL.
+##     buffer_bytes:   Number of bytes in each data buffer.
+##     original_count: Number of original_data[] buffers provided.
+##     original_data:  Array of pointers to original data buffers.
+##     recovery_count: Number of recovery_data[] buffers provided.
+##     recovery_data:  Array of pointers to recovery data buffers.
+##     work_count:     Number of work_data[] buffers, from leo_decode_work_count().
+##     work_data:      Array of pointers to recovery data buffers.
 ##
-## The sum of recoveryCount + the number of non-NULL original data must be at
-## least originalCount in order to perform recovery.
+##     Lost original/recovery data should be set to NULL.
 ##
-## Returns LeopardSuccess on success.
-## Returns other values on errors.
+##     The sum of recovery_count + the number of non-NULL original data must be at
+##     least original_count in order to perform recovery.
+##
+##     Returns Leopard_Success on success.
+##     Returns other values on errors.
+##
 
 proc leoDecode*(
-  bufferBytes: uint64,   ## Number of bytes in each data buffer
-  originalCount: cuint,  ## Number of originalData[] buffer pointers
-  recoveryCount: cuint,  ## Number of recoveryData[] buffer pointers
-  workCount: cuint,      ## Number of workData[] buffer pointers
-  originalData: pointer, ## Array of pointers to original data buffers
-  recoveryData: pointer, ## Array of pointers to recovery data buffers
-  workData: pointer,     ## Array of pointers to work data buffers
-): LeopardResult {.leo, importc: "leo_decode".}
+  bufferBytes: uint64;
+  originalCount: cuint;
+  recoveryCount: cuint;
+  workCount: cuint;
+  originalData: ptr pointer;
+  recoveryData: ptr pointer;
+  workData: ptr pointer): LeopardResult {.leo, importc: "leo_decode".}
+  ##  Number of bytes in each data buffer
+  ##  Number of original_data[] buffer pointers
+  ##  Number of recovery_data[] buffer pointers
+  ##  Number of buffer pointers in work_data[]
+  ##  Array of original data buffers
+  ##  Array of recovery data buffers
+##  Array of work data buffers
