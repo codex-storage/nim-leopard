@@ -237,13 +237,13 @@ func leoEncodeWorkCount*(originalCount, recoveryCount: cuint): cuint
 ## Returns other values on errors.
 
 proc leoEncode*(
-  bufferBytes: uint64,   ## Number of bytes in each data buffer
-  originalCount: cuint,  ## Number of originalData[] buffer pointers
-  recoveryCount: cuint,  ## Number of recovery data buffer pointers
-                         ## (readable post-call from start of workData[])
-  workCount: cuint,      ## Number of workData[] buffer pointers
-  originalData: pointer, ## Array of pointers to original data buffers
-  workData: pointer,     ## Array of pointers to work data buffers
+  bufferBytes: uint64,       ## Number of bytes in each data buffer
+  originalCount: cuint,      ## Number of originalData[] buffer pointers
+  recoveryCount: cuint,      ## Number of recovery data buffer pointers
+                             ## (readable post-call from start of workData[])
+  workCount: cuint,          ## Number of workData[] buffer pointers
+  originalData: ptr pointer, ## Array of pointers to original data buffers
+  workData: ptr pointer,     ## Array of pointers to work data buffers
 ): LeopardResult {.leo, importc: "leo_encode".}
 
 
@@ -283,11 +283,11 @@ func leoDecodeWorkCount*(originalCount, recoveryCount: cuint): cuint
 ## Returns other values on errors.
 
 proc leoDecode*(
-  bufferBytes: uint64,   ## Number of bytes in each data buffer
-  originalCount: cuint,  ## Number of originalData[] buffer pointers
-  recoveryCount: cuint,  ## Number of recoveryData[] buffer pointers
-  workCount: cuint,      ## Number of workData[] buffer pointers
-  originalData: pointer, ## Array of pointers to original data buffers
-  recoveryData: pointer, ## Array of pointers to recovery data buffers
-  workData: pointer,     ## Array of pointers to work data buffers
+  bufferBytes: uint64,       ## Number of bytes in each data buffer
+  originalCount: cuint,      ## Number of originalData[] buffer pointers
+  recoveryCount: cuint,      ## Number of recoveryData[] buffer pointers
+  workCount: cuint,          ## Number of workData[] buffer pointers
+  originalData: ptr pointer, ## Array of pointers to original data buffers
+  recoveryData: ptr pointer, ## Array of pointers to recovery data buffers
+  workData: ptr pointer,     ## Array of pointers to work data buffers
 ): LeopardResult {.leo, importc: "leo_decode".}
