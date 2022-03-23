@@ -1,3 +1,4 @@
+import pkg/stew/ptrops
 import pkg/stew/results
 import pkg/upraises
 
@@ -169,7 +170,8 @@ proc encode*(code: ReedSolomonCode, data: Data):
         msg: LeopardInconsistentSizeMsg)
 
     enData[i] = allocAligned(symbolBytes, LEO_ALIGN_BYTES)
-    copyMem(enData[i], addr data[i][0], symbolBytes)
+    for j in 0..<symbolBytes:
+      copyMem(enData[i].offset j, addr data[i][j], 1)
 
   let
     workCount = leoEncodeWorkCount(code.data.cuint, code.parity.cuint)
@@ -207,7 +209,8 @@ proc encode*(code: ReedSolomonCode, data: Data):
   newSeq(parityData, code.parity)
   for i in 0..<code.parity:
     newSeq(parityData[i], symbolBytes)
-    copyMem(addr parityData[i][0], workData[i], symbolBytes)
+    for j in 0..<symbolBytes:
+      copyMem(addr parityData[i][j], workData[i].offset j, 1)
 
   for i in 0..<code.data: freeAligned enData[i]
   for i in 0..<workCount: freeAligned workData[i]
@@ -255,7 +258,8 @@ proc decode*(code: ReedSolomonCode, data: Data, parityData: ParityData,
           msg: LeopardInconsistentSizeMsg)
 
       deData[i] = allocAligned(symbolBytes.int, LEO_ALIGN_BYTES)
-      copyMem(deData[i], addr data[i][0], symbolBytes)
+      for j in 0..<symbolBytes.int:
+        copyMem(deData[i].offset j, addr data[i][j], 1)
 
     else:
       holes.add i.int
@@ -276,7 +280,8 @@ proc decode*(code: ReedSolomonCode, data: Data, parityData: ParityData,
           msg: LeopardInconsistentSizeMsg)
 
       paData[i] = allocAligned(symbolBytes.int, LEO_ALIGN_BYTES)
-      copyMem(paData[i], addr parityData[i][0], symbolBytes)
+      for j in 0..<symbolBytes.int:
+        copyMem(paData[i].offset j, addr parityData[i][j], 1)
 
   let
     workCount = leoDecodeWorkCount(code.data.cuint, code.parity.cuint)
@@ -317,7 +322,8 @@ proc decode*(code: ReedSolomonCode, data: Data, parityData: ParityData,
   newSeq(recoveredData, workCount)
   for i in 0..<workCount:
     newSeq(recoveredData[i], symbolBytes)
-    copyMem(addr recoveredData[i][0], workData[i], symbolBytes)
+    for j in 0..<symbolBytes.int:
+      copyMem(addr recoveredData[i][j], workData[i].offset j, 1)
 
   for i in holes:
     data[i] = recoveredData[i]
