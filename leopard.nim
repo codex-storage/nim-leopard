@@ -165,7 +165,7 @@ proc encode*(code: ReedSolomonCode, data: Data):
 
   for i in 0..<code.data:
     if data[i].len != symbolBytes:
-      for i in 0..<code.data: freeAligned enData[i]
+      for j in 0..<(i - 1): freeAligned enData[j]
       return err LeopardError(code: LeopardInconsistentSize,
         msg: LeopardInconsistentSizeMsg)
 
@@ -253,7 +253,7 @@ proc decode*(code: ReedSolomonCode, data: Data, parityData: ParityData,
   for i in 0..<code.data:
     if data[i].len != 0:
       if data[i].len != symbolBytes.int:
-        for i in 0..<code.data: freeAligned deData[i]
+        for j in 0..<(i - 1): freeAligned deData[j]
         return err LeopardError(code: LeopardInconsistentSize,
           msg: LeopardInconsistentSizeMsg)
 
@@ -274,8 +274,8 @@ proc decode*(code: ReedSolomonCode, data: Data, parityData: ParityData,
   for i in 0..<code.parity:
     if parityData[i].len != 0:
       if parityData[i].len != symbolBytes.int:
-        for i in 0..<code.data: freeAligned deData[i]
-        for i in 0..<code.parity: freeAligned paData[i]
+        for j in 0..<code.data: freeAligned deData[j]
+        for j in 0..<(i - 1): freeAligned paData[j]
         return err LeopardError(code: LeopardInconsistentSize,
           msg: LeopardInconsistentSizeMsg)
 
