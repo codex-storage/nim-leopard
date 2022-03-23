@@ -169,7 +169,7 @@ proc encode*(code: ReedSolomonCode, data: Data):
         msg: LeopardInconsistentSizeMsg)
 
     enData[i] = allocAligned(symbolBytes, LEO_ALIGN_BYTES)
-    moveMem(enData[i], addr data[i][0], symbolBytes)
+    copyMem(enData[i], addr data[i][0], symbolBytes)
 
   let
     workCount = leoEncodeWorkCount(code.data.cuint, code.parity.cuint)
@@ -207,7 +207,7 @@ proc encode*(code: ReedSolomonCode, data: Data):
   newSeq(parityData, code.parity)
   for i in 0..<code.parity:
     newSeq(parityData[i], symbolBytes)
-    moveMem(addr parityData[i][0], workData[i], symbolBytes)
+    copyMem(addr parityData[i][0], workData[i], symbolBytes)
 
   for i in 0..<code.data: freeAligned enData[i]
   for i in 0..<workCount: freeAligned workData[i]
@@ -255,7 +255,7 @@ proc decode*(code: ReedSolomonCode, data: Data, parityData: ParityData,
           msg: LeopardInconsistentSizeMsg)
 
       deData[i] = allocAligned(symbolBytes.int, LEO_ALIGN_BYTES)
-      moveMem(deData[i], addr data[i][0], symbolBytes)
+      copyMem(deData[i], addr data[i][0], symbolBytes)
 
     else:
       holes.add i.int
@@ -276,7 +276,7 @@ proc decode*(code: ReedSolomonCode, data: Data, parityData: ParityData,
           msg: LeopardInconsistentSizeMsg)
 
       paData[i] = allocAligned(symbolBytes.int, LEO_ALIGN_BYTES)
-      moveMem(paData[i], addr parityData[i][0], symbolBytes)
+      copyMem(paData[i], addr parityData[i][0], symbolBytes)
 
   let
     workCount = leoDecodeWorkCount(code.data.cuint, code.parity.cuint)
@@ -317,7 +317,7 @@ proc decode*(code: ReedSolomonCode, data: Data, parityData: ParityData,
   newSeq(recoveredData, workCount)
   for i in 0..<workCount:
     newSeq(recoveredData[i], symbolBytes)
-    moveMem(addr recoveredData[i][0], workData[i], symbolBytes)
+    copyMem(addr recoveredData[i][0], workData[i], symbolBytes)
 
   for i in holes:
     data[i] = recoveredData[i]
