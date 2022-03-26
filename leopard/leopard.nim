@@ -105,6 +105,8 @@ func decode*(
   for i in 0..<self.decodeBufferCount:
     zeroMem(self.decodeBufferPtr[i], self.bufSize)
 
+  # this is needed because erasures are identified
+  # with `nil` pointers
   var
     dataPtr = newSeq[LeoBufferPtr](data.len)
     parityPtr = newSeq[LeoBufferPtr](self.workBufferCount)
@@ -147,23 +149,26 @@ func decode*(
 func free*(self: var Leo) =
   if self.workBufferPtr.len > 0:
     for i, p in self.workBufferPtr:
-      p.leoFree()
-      self.workBufferPtr[i] = nil
+      if not isNil(p):
+        p.leoFree()
+        self.workBufferPtr[i] = nil
 
     self.workBufferPtr.setLen(0)
 
   if self.dataBufferPtr.len > 0:
     for i, p in self.dataBufferPtr:
-      p.leoFree()
-      self.dataBufferPtr[i] = nil
+      if not isNil(p):
+        p.leoFree()
+        self.dataBufferPtr[i] = nil
 
     self.dataBufferPtr.setLen(0)
 
   if self.kind == LeoCoderKind.Decoder:
     if self.decodeBufferPtr.len > 0:
       for i, p in self.decodeBufferPtr:
-        p.leoFree()
-        self.decodeBufferPtr[i] = nil
+        if not isNil(p):
+          p.leoFree()
+          self.decodeBufferPtr[i] = nil
       self.decodeBufferPtr.setLen(0)
 
 # TODO: The destructor doesn't behave as
