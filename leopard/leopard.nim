@@ -140,7 +140,6 @@ proc decode*(
 
   for i in 0..<self.buffers:
     if data[i].len <= 0:
-      echo string.fromBytes(self.decodeBufferPtr[i].toOpenArray(0, self.bufSize - 1))
       copyMem(addr recovered[i][0], self.decodeBufferPtr[i], self.bufSize)
 
   ok()
