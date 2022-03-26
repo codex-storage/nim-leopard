@@ -4,7 +4,7 @@ import pkg/stew/byteutils
 
 import ../leopard
 
-suite "Parametrization":
+suite "Leopard Parametrization":
   test "Should not allow invalid buffer multiples":
     check:
       LeoEncoder.init(63, 4, 2).error == "bufSize should be multiples of 64 bytes!"
@@ -63,7 +63,7 @@ suite "Parametrization":
     check:
       leo.decode(data, parity, recovered).error == "Number of recovered buffers should match buffers!"
 
-suite "Leopard Encode/Decode":
+suite "Leopard simple Encode/Decode":
   const
     TestString = "Hello World!"
     DataCount = 4
@@ -138,3 +138,6 @@ suite "Leopard Encode/Decode":
     decoder.decode(data, parity, recovered).tryGet()
 
     check recovered[0] == data1
+
+suite "Leopard Encode/Decode":
+  discard
