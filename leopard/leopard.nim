@@ -44,7 +44,7 @@ type
     of LeoCoderKind.Encoder:
       discard
 
-proc encode*(
+func encode*(
   self: var Leo,
   data,
   parity: var openArray[seq[byte]]): Result[void, cstring] =
@@ -80,7 +80,7 @@ proc encode*(
 
   return ok()
 
-proc decode*(
+func decode*(
   self: var Leo,
   data,
   parity,
@@ -144,7 +144,7 @@ proc decode*(
 
   ok()
 
-proc free*(self: var Leo) =
+func free*(self: var Leo) =
   if self.workBufferPtr.len > 0:
     for i, p in self.workBufferPtr:
       p.leoFree()
@@ -173,22 +173,6 @@ proc free*(self: var Leo) =
 # work.
 # proc `=destroy`*(self: var Leo) =
 #   self.free()
-
-proc setup*(self: var Leo, bufSize, buffers, parity: int): Result[void, cstring] =
-  if bufSize mod BuffMultiples != 0:
-    return err("bufSize should be multiples of 64 bytes!")
-
-  once:
-    # First attempt to init the library
-    # This happens only once for all threads...
-    if (let res = leoinit(); res.ord != LeopardSuccess.ord):
-      return err(leoResultString(res.LeopardResult))
-
-  self.bufSize = bufSize
-  self.buffers = buffers
-  self.parity = parity
-
-  return ok()
 
 proc init*(T: type Leo, bufSize, buffers, parity: int, kind: LeoCoderKind): Result[T, cstring] =
   if bufSize mod BuffMultiples != 0:
