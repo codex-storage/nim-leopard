@@ -31,12 +31,12 @@ type
     Decoder
 
   Leo* = object of RootObj
-    bufSize*: int                       # size of the buffer in multiples of 64
-    buffers*: int                       # total number of data buffers (K)
-    parity*: int                        # total number of parity buffers (M)
-    dataBufferPtr: seq[LeoBufferPtr]    # buffer where data is copied before encoding
-    workBufferCount: int                # number of parity work buffers
-    workBufferPtr: seq[LeoBufferPtr]    # buffer where parity is copied before encoding
+    bufSize*: int                         # size of the buffer in multiples of 64
+    buffers*: int                         # total number of data buffers (K)
+    parity*: int                          # total number of parity buffers (M)
+    dataBufferPtr: seq[LeoBufferPtr]      # buffer where data is copied before encoding
+    workBufferCount: int                  # number of parity work buffers
+    workBufferPtr: seq[LeoBufferPtr]      # buffer where parity is copied before encoding
     case kind: LeoCoderKind
     of LeoCoderKind.Decoder:
       decodeBufferCount: int              # number of decoding work buffers
@@ -44,8 +44,11 @@ type
     of LeoCoderKind.Encoder:
       discard
 
+  LeoEncoder* = object of Leo
+  LeoDecoder* = object of Leo
+
 func encode*(
-  self: var Leo,
+  self: var LeoEncoder,
   data,
   parity: var openArray[seq[byte]]): Result[void, cstring] =
   ## Encode a list of buffers in `data` into a number of `bufSize` sized
@@ -54,6 +57,12 @@ func encode*(
   ## `data`   - list of original data `buffers` of size `bufSize`
   ## `parity` - list of parity `buffers` of size `bufSize`
   ##
+
+  if data.len != self.buffers:
+    return err("Number of data buffers should match!")
+
+  if parity.len != self.parity:
+    return err("Number of parity buffers should match!")
 
   # zero encode work buffer to avoid corrupting with previous run
   for i in 0..<self.workBufferCount:
@@ -81,7 +90,7 @@ func encode*(
   return ok()
 
 func decode*(
-  self: var Leo,
+  self: var LeoDecoder,
   data,
   parity,
   recovered: var openArray[seq[byte]]): Result[void, cstring] =
@@ -94,19 +103,26 @@ func decode*(
   ## `recovered`  - list of recovered `buffers` of size `bufSize`
   ##
 
-  if data.len != self.buffers: return err("Number of data buffers should match!")
-  if parity.len != self.parity: return err("Number of parity buffers should match!")
-  if recovered.len != self.buffers: return err("Number of recovered buffers should match buffers!")
+  if data.len != self.buffers:
+    return err("Number of data buffers should match!")
 
-  # zero both work buffers before decoding
+  if parity.len != self.parity:
+    return err("Number of parity buffers should match!")
+
+  if recovered.len != self.buffers:
+    return err("Number of recovered buffers should match buffers!")
+
+  # clean out work and data buffers
   for i in 0..<self.workBufferCount:
     zeroMem(self.workBufferPtr[i], self.bufSize)
 
   for i in 0..<self.decodeBufferCount:
     zeroMem(self.decodeBufferPtr[i], self.bufSize)
 
-  # this is needed because erasures are identified
-  # with `nil` pointers
+  for i in 0..<data.len:
+    zeroMem(self.dataBufferPtr[i], self.bufSize)
+
+  # this is needed because erasures are nil pointers
   var
     dataPtr = newSeq[LeoBufferPtr](data.len)
     parityPtr = newSeq[LeoBufferPtr](self.workBufferCount)
@@ -114,16 +130,16 @@ func decode*(
   # copy data into aligned buffer
   for i in 0..<data.len:
     if data[i].len > 0:
-      dataPtr[i] = self.dataBufferPtr[i]
       copyMem(self.dataBufferPtr[i], addr data[i][0], self.bufSize)
+      dataPtr[i] = self.dataBufferPtr[i]
     else:
       dataPtr[i] = nil
 
   # copy parity into aligned buffer
   for i in 0..<self.workBufferCount:
     if i < parity.len and parity[i].len > 0:
-      parityPtr[i] = self.workBufferPtr[i]
       copyMem(self.workBufferPtr[i], addr parity[i][0], self.bufSize)
+      parityPtr[i] = self.workBufferPtr[i]
     else:
       parityPtr[i] = nil
 
@@ -134,14 +150,14 @@ func decode*(
       self.parity.cuint,
       self.decodeBufferCount.cuint,
       cast[ptr pointer](addr dataPtr[0]),
-      cast[ptr pointer](addr self.workBufferPtr[0]),
+      cast[ptr pointer](addr parityPtr[0]),
       cast[ptr pointer](addr self.decodeBufferPtr[0]))
 
   if ord(res) != ord(LeopardSuccess):
     return err(leoResultString(res.LeopardResult))
 
-  for i in 0..<self.buffers:
-    if data[i].len <= 0:
+  for i, p in dataPtr:
+    if p.isNil:
       copyMem(addr recovered[i][0], self.decodeBufferPtr[i], self.bufSize)
 
   ok()
@@ -179,12 +195,20 @@ func free*(self: var Leo) =
 # proc `=destroy`*(self: var Leo) =
 #   self.free()
 
-proc init*(T: type Leo, bufSize, buffers, parity: int, kind: LeoCoderKind): Result[T, cstring] =
+proc init[TT: Leo](
+  T: type TT,
+  bufSize,
+  buffers,
+  parity: int,
+  kind: LeoCoderKind): Result[T, cstring] =
   if bufSize mod BuffMultiples != 0:
     return err("bufSize should be multiples of 64 bytes!")
 
+  if parity > buffers:
+    return err("number of parity buffers cannot exceed number of data buffers!")
+
   once:
-    # First, attempt to init the library,
+    # First, attempt to init the leopard library,
     # this happens only once for all threads and
     # should be safe as internal tables are only read,
     # never written. However instantiation should be
@@ -196,7 +220,7 @@ proc init*(T: type Leo, bufSize, buffers, parity: int, kind: LeoCoderKind): Resu
       return err(leoResultString(res.LeopardResult))
 
   var
-    self = Leo(
+    self = T(
       kind: kind,
       bufSize: bufSize,
       buffers: buffers,
@@ -224,3 +248,17 @@ proc init*(T: type Leo, bufSize, buffers, parity: int, kind: LeoCoderKind): Resu
       self.decodeBufferPtr.add(cast[LeoBufferPtr](self.bufSize.leoAlloc()))
 
   ok(self)
+
+proc init*(
+  T: type LeoEncoder,
+  bufSize,
+  buffers,
+  parity: int): Result[LeoEncoder, cstring] =
+  LeoEncoder.init(bufSize, buffers, parity, LeoCoderKind.Encoder)
+
+proc init*(
+  T: type LeoDecoder,
+  bufSize,
+  buffers,
+  parity: int): Result[LeoDecoder, cstring] =
+  LeoDecoder.init(bufSize, buffers, parity, LeoCoderKind.Decoder)
