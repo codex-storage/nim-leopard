@@ -14,7 +14,6 @@ push: {.upraises: [].}
 
 import system/ansi_c
 
-import pkg/stew/ptrops
 import ./cpuinfo_x86
 
 ## inspired by https://github.com/mratsim/weave/blob/master/weave/memory/allocs.nim

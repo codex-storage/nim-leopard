@@ -1,6 +1,5 @@
 import pkg/unittest2
 import pkg/stew/results
-import pkg/stew/byteutils
 
 import ../leopard
 

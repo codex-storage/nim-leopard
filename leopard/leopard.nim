@@ -13,7 +13,6 @@ push: {.upraises: [].}
 {.deadCodeElim: on.}
 
 import pkg/stew/results
-import pkg/stew/byteutils
 
 import ./wrapper
 import ./utils
