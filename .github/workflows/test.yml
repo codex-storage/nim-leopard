@@ -118,8 +118,8 @@ jobs:
           # delete broken symlinks, which can arise because e.g. the cache
           # restored a symlink that points to an executable within
           # ../pkgs/foo-1.2.3/ but the project's .nimble file has been updated
-          # to install foo-#head. In the case of a broken symlink, nimble's
-          # auto-overwrite fails (only sometimes? only on macOS?)
+          # to install foo-#head; in the case of a broken symlink, nimble's
+          # auto-overwrite fails
           if [[ ${{ matrix.platform.os }} = macos ]]; then
             gfind . -xtype l -delete
           else
@@ -132,9 +132,9 @@ jobs:
         run: |
           source "${HOME}/.bash_env"
           if [[ ${{ matrix.platform.os }} = windows ]]; then
-            touch tests/test_leopard.exe
+            touch tests/testleopard.exe
           else
-            touch tests/test_leopard
+            touch tests/testleopard
           fi
           if [[ ${{ matrix.platform.os }} = macos ]]; then
             export PATH="$(brew --prefix)/opt/llvm/bin:${PATH}"
@@ -145,10 +145,10 @@ jobs:
           fi
           if [[ ${{ matrix.platform.os }} = macos ]]; then
             echo
-            echo otool -L tests/test_leopard
-            otool -L tests/test_leopard
+            echo otool -L tests/testleopard
+            otool -L tests/testleopard
           else
             echo
-            echo ldd tests/test_leopard
-            ldd tests/test_leopard
+            echo ldd tests/testleopard
+            ldd tests/testleopard
           fi
