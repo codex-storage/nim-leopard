@@ -161,3 +161,12 @@ suite "Leopard Encode/Decode":
 
   test "bufSize = 4096, K = 8000, M = 2000 - drop data = 1000, parity = 1000":
     testPackets(8000, 2000, 4096, 1000, 1000).tryGet()
+
+  test "bufSize = 4096, K = 8000, M = 8000 - drop data = 8000":
+    testPackets(8000, 8000, 4096, 8000, 0).tryGet()
+
+  test "bufSize = 4096, K = 8000, M = 2000 - drop parity = 8000":
+    testPackets(8000, 8000, 4096, 0, 8000).tryGet()
+
+  test "bufSize = 4096, K = 8000, M = 8000 - drop data = 4000, parity = 4000":
+    testPackets(8000, 8000, 4096, 4000, 4000).tryGet()
