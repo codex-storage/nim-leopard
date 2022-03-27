@@ -26,14 +26,14 @@ when defined(windows):
     alignedAllocWindows(size, alignment)
 
   proc alignedAllocWindows(size, alignment: csize_t): pointer
-    {.sideeffect, importc: "_aligned_malloc", header: "<malloc.h>".}
+    {.importc: "_aligned_malloc", header: "<malloc.h>".}
     # Beware of the arg order!
 
   proc alignedFree*[T](p: ptr T)
-    {.sideeffect, importc: "_aligned_free", header: "<malloc.h>".}
+    {.importc: "_aligned_free", header: "<malloc.h>".}
 elif defined(osx):
   proc posix_memalign(mem: var pointer, alignment, size: csize_t)
-    {.sideeffect, importc, header:"<stdlib.h>".}
+    {.importc, header:"<stdlib.h>".}
 
   proc alignedAlloc(alignment, size: csize_t): pointer {.inline.} =
     posix_memalign(result, alignment, size)
@@ -42,10 +42,10 @@ elif defined(osx):
     c_free(p)
 elif defined(unix):
   proc alignedAlloc(alignment, size: csize_t): pointer
-    {.sideeffect, importc: "aligned_alloc", header: "<stdlib.h>".}
+    {.importc: "aligned_alloc", header: "<stdlib.h>".}
 
   proc alignedFree*[T](p: ptr T) {.inline.} =
-    {.sideeffect, importc: "free_aligned", header: "<stdlib.h>".}
+    {.importc: "free_aligned", header: "<stdlib.h>".}
     c_free(p)
 else:
   {.warning: "Falling back to manual pointer alignment, might end-up using more memory!".}
