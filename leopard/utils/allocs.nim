@@ -47,7 +47,7 @@ elif defined(unix):
   proc alignedFree*[T](p: ptr T) {.inline.} =
     c_free(p)
 else:
-  {.warning: "Falling back to manual pointer alignment, might end-up using more memory!".}
+  {.warning: "Falling back to manual pointer alignment, this is highly inefficient!".}
   proc alignedAlloc*(size, align: Positive): pointer {.inline.}  =
     var
       data = c_malloc(align + size)
