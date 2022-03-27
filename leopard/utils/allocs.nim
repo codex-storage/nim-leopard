@@ -45,7 +45,6 @@ elif defined(unix):
     {.importc: "aligned_alloc", header: "<stdlib.h>".}
 
   proc alignedFree*[T](p: ptr T) {.inline.} =
-    {.importc: "free_aligned", header: "<stdlib.h>".}
     c_free(p)
 else:
   {.warning: "Falling back to manual pointer alignment, might end-up using more memory!".}
