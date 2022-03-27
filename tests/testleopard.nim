@@ -1,7 +1,13 @@
+import std/random
+import std/sets
+
 import pkg/unittest2
 import pkg/stew/results
 
 import ../leopard
+import ./helpers
+
+randomize()
 
 suite "Leopard Parametrization":
   test "Should not allow invalid buffer multiples":
@@ -135,8 +141,23 @@ suite "Leopard simple Encode/Decode":
     parity[0].setLen(0)
 
     decoder.decode(data, parity, recovered).tryGet()
-
     check recovered[0] == data1
 
 suite "Leopard Encode/Decode":
-  discard
+  test "bufSize = 4096, K = 800, M = 200 - drop data = 200 data":
+    testPackets(800, 200, 4096, 200, 0).tryGet()
+
+  test "bufSize = 4096, K = 800, M = 200 - drop parity = 200":
+    testPackets(800, 200, 4096, 0, 200).tryGet()
+
+  test "bufSize = 4096, K = 800, M = 200 - drop data = 100, drop parity = 100":
+    testPackets(800, 200, 4096, 0, 200).tryGet()
+
+  test "bufSize = 4096, K = 8000, M = 2000 - drop data = 2000":
+    testPackets(8000, 2000, 4096, 2000, 0).tryGet()
+
+  test "bufSize = 4096, K = 8000, M = 2000 - drop parity = 2000":
+    testPackets(8000, 2000, 4096, 0, 2000).tryGet()
+
+  test "bufSize = 4096, K = 8000, M = 2000 - drop data = 1000, parity = 1000":
+    testPackets(8000, 2000, 4096, 1000, 1000).tryGet()
