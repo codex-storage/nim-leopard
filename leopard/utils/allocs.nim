@@ -22,12 +22,12 @@ let
   LeoAlignBytes* = if hasAvx2(): 32'u else: 16'u
 
 when defined(windows):
-  proc alignedAlloc(alignment, size: csize_t): pointer =
-    alignedAllocWindows(size, alignment)
-
   proc alignedAllocWindows(size, alignment: csize_t): pointer
     {.importc: "_aligned_malloc", header: "<malloc.h>".}
     # Beware of the arg order!
+
+  proc alignedAlloc(alignment, size: csize_t): pointer =
+    alignedAllocWindows(size, alignment)
 
   proc alignedFree*[T](p: ptr T)
     {.importc: "_aligned_free", header: "<malloc.h>".}
