@@ -35,7 +35,7 @@ type
     parity*: int                          # total number of parity buffers (M)
     dataBufferPtr: seq[LeoBufferPtr]      # buffer where data is copied before encoding
     workBufferCount: int                  # number of parity work buffers
-    workBufferPtr: seq[LeoBufferPtr]      # buffer where parity is copied before encoding
+    workBufferPtr: seq[LeoBufferPtr]      # buffer where parity data is written during encoding or before decoding
     case kind: LeoCoderKind
     of LeoCoderKind.Decoder:
       decodeBufferCount: int              # number of decoding work buffers
