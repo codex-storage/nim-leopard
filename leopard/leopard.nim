@@ -206,7 +206,7 @@ proc init[TT: Leo](
   if parity > buffers:
     return err("number of parity buffers cannot exceed number of data buffers!")
 
-  if buffers + parity > 65536:
+  if (buffers + parity) > 65536:
     return err("number of parity and data buffers cannot exceed 65536!")
 
   once:

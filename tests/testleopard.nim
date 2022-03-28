@@ -20,6 +20,14 @@ suite "Leopard Parametrization":
       LeoEncoder.init(64, 1, 2).error ==
       "number of parity buffers cannot exceed number of data buffers!"
 
+  test "Should not allow data + parity to exceed 65536":
+    check:
+      LeoEncoder.init(64, 65536 + 1, 0).error ==
+      "number of parity and data buffers cannot exceed 65536!"
+
+      LeoEncoder.init(64, 32768 + 1, 32768).error ==
+      "number of parity and data buffers cannot exceed 65536!"
+
   test "Should not allow encoding with invalid data buffer counts":
     var
       leo = LeoEncoder.init(64, 4, 2).tryGet()
