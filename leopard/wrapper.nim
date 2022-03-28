@@ -286,4 +286,4 @@ proc leoDecode*(
   ##  Number of buffer pointers in work_data[]
   ##  Array of original data buffers
   ##  Array of recovery data buffers
-##  Array of work data buffers
+  ##  Array of work data buffers
