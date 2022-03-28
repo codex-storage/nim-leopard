@@ -73,7 +73,7 @@ func encode*(
 
   let
     res = leoEncode(
-      self.bufSize.cuint,
+      self.bufSize.culonglong,
       self.buffers.cuint,
       self.parity.cuint,
       self.workBufferCount.cuint,
@@ -144,7 +144,7 @@ func decode*(
 
   let
     res = leo_decode(
-      self.bufSize.cuint,
+      self.bufSize.culonglong,
       self.buffers.cuint,
       self.parity.cuint,
       self.decodeBufferCount.cuint,
@@ -205,6 +205,9 @@ proc init[TT: Leo](
 
   if parity > buffers:
     return err("number of parity buffers cannot exceed number of data buffers!")
+
+  if buffers + parity > 65536:
+    return err("number of parity and data buffers cannot exceed 65536!")
 
   once:
     # First, attempt to init the leopard library,
