@@ -67,47 +67,40 @@ proc testPackets*(
   parity,
   bufSize,
   dataLosses: int,
-  parityLosses: int): Result[void, cstring] =
+  parityLosses: int,
+  encoder: var LeoEncoder,
+  decoder: var LeoDecoder): Result[void, cstring] =
 
   var
     dataBuf = newSeqOfCap[seq[byte]](buffers)
     parityBuf = newSeqOfCap[seq[byte]](parity)
     recoveredBuf = newSeqOfCap[seq[byte]](buffers)
-    encoder: LeoEncoder
-    decoder: LeoDecoder
 
-  try:
-    encoder = ? LeoEncoder.init(bufSize, buffers, parity)
-    decoder = ? LeoDecoder.init(bufSize, buffers, parity)
+  for _ in 0..<buffers:
+    var
+      dataSeq = newSeq[byte](bufSize)
 
-    for _ in 0..<buffers:
-      var
-        dataSeq = newSeq[byte](bufSize)
+    randomCRCPacket(dataSeq)
+    dataBuf.add(dataSeq)
 
-      randomCRCPacket(dataSeq)
-      dataBuf.add(dataSeq)
+    recoveredBuf.add(newSeq[byte](bufSize))
 
-      recoveredBuf.add(newSeq[byte](bufSize))
+  for _ in 0..<parity:
+    parityBuf.add(newSeq[byte](bufSize))
 
-    for _ in 0..<parity:
-      parityBuf.add(newSeq[byte](bufSize))
+  encoder.encode(dataBuf, parityBuf).tryGet()
 
-    encoder.encode(dataBuf, parityBuf).tryGet()
+  if dataLosses > 0:
+    dropRandomIdx(dataBuf, dataLosses)
 
-    if dataLosses > 0:
-      dropRandomIdx(dataBuf, dataLosses)
+  if parityLosses > 0:
+    dropRandomIdx(parityBuf, parityLosses)
 
-    if parityLosses > 0:
-      dropRandomIdx(parityBuf, parityLosses)
+  decoder.decode(dataBuf, parityBuf, recoveredBuf).tryGet()
 
-    decoder.decode(dataBuf, parityBuf, recoveredBuf).tryGet()
-
-    for i, d in dataBuf:
-      if d.len <= 0:
-        if not checkCRCPacket(recoveredBuf[i]):
-          return err(("Check failed for packet " & $i).cstring)
-  finally:
-    encoder.free()
-    decoder.free()
+  for i, d in dataBuf:
+    if d.len <= 0:
+      if not checkCRCPacket(recoveredBuf[i]):
+        return err(("Check failed for packet " & $i).cstring)
 
   ok()

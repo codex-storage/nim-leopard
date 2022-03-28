@@ -145,28 +145,177 @@ suite "Leopard simple Encode/Decode":
 
 suite "Leopard Encode/Decode":
   test "bufSize = 4096, K = 800, M = 200 - drop data = 200 data":
-    testPackets(800, 200, 4096, 200, 0).tryGet()
+    var
+      encoder: LeoEncoder
+      decoder: LeoDecoder
+      buffers = 800
+      parity = 200
+      bufSize = 4096
+      dataLoses = 200
+
+    try:
+      encoder = LeoEncoder.init(bufSize, buffers, parity).tryGet()
+      decoder = LeoDecoder.init(bufSize, buffers, parity).tryGet()
+      testPackets(buffers, parity, bufSize, dataLoses, 0, encoder, decoder).tryGet()
+    finally:
+      encoder.free()
+      decoder.free()
 
   test "bufSize = 4096, K = 800, M = 200 - drop parity = 200":
-    testPackets(800, 200, 4096, 0, 200).tryGet()
+    var
+      encoder: LeoEncoder
+      decoder: LeoDecoder
+      buffers = 800
+      parity = 200
+      bufSize = 4096
+      parityLoses = 200
+
+    try:
+      encoder = LeoEncoder.init(bufSize, buffers, parity).tryGet()
+      decoder = LeoDecoder.init(bufSize, buffers, parity).tryGet()
+      testPackets(buffers, parity, bufSize, parityLoses, 0, encoder, decoder).tryGet()
+    finally:
+      encoder.free()
+      decoder.free()
 
   test "bufSize = 4096, K = 800, M = 200 - drop data = 100, drop parity = 100":
-    testPackets(800, 200, 4096, 0, 200).tryGet()
+    var
+      encoder: LeoEncoder
+      decoder: LeoDecoder
+      buffers = 800
+      parity = 200
+      bufSize = 4096
+      dataLoses = 100
+      parityLoses = 100
+
+    try:
+      encoder = LeoEncoder.init(bufSize, buffers, parity).tryGet()
+      decoder = LeoDecoder.init(bufSize, buffers, parity).tryGet()
+      testPackets(buffers, parity, bufSize, dataLoses, parityLoses, encoder, decoder).tryGet()
+    finally:
+      encoder.free()
+      decoder.free()
 
   test "bufSize = 4096, K = 8000, M = 2000 - drop data = 2000":
-    testPackets(8000, 2000, 4096, 2000, 0).tryGet()
+    var
+      encoder: LeoEncoder
+      decoder: LeoDecoder
+      buffers = 8000
+      parity = 2000
+      bufSize = 4096
+      dataLoses = 2000
+      parityLoses = 0
+
+    try:
+      encoder = LeoEncoder.init(bufSize, buffers, parity).tryGet()
+      decoder = LeoDecoder.init(bufSize, buffers, parity).tryGet()
+      testPackets(buffers, parity, bufSize, dataLoses, parityLoses, encoder, decoder).tryGet()
+    finally:
+      encoder.free()
+      decoder.free()
 
   test "bufSize = 4096, K = 8000, M = 2000 - drop parity = 2000":
-    testPackets(8000, 2000, 4096, 0, 2000).tryGet()
+    var
+      encoder: LeoEncoder
+      decoder: LeoDecoder
+      buffers = 8000
+      parity = 2000
+      bufSize = 4096
+      dataLoses = 0
+      parityLoses = 2000
+
+    try:
+      encoder = LeoEncoder.init(bufSize, buffers, parity).tryGet()
+      decoder = LeoDecoder.init(bufSize, buffers, parity).tryGet()
+      testPackets(buffers, parity, bufSize, dataLoses, parityLoses, encoder, decoder).tryGet()
+    finally:
+      encoder.free()
+      decoder.free()
 
   test "bufSize = 4096, K = 8000, M = 2000 - drop data = 1000, parity = 1000":
-    testPackets(8000, 2000, 4096, 1000, 1000).tryGet()
+    var
+      encoder: LeoEncoder
+      decoder: LeoDecoder
+      buffers = 8000
+      parity = 2000
+      bufSize = 4096
+      dataLoses = 1000
+      parityLoses = 1000
+
+    try:
+      encoder = LeoEncoder.init(bufSize, buffers, parity).tryGet()
+      decoder = LeoDecoder.init(bufSize, buffers, parity).tryGet()
+      testPackets(buffers, parity, bufSize, dataLoses, parityLoses, encoder, decoder).tryGet()
+    finally:
+      encoder.free()
+      decoder.free()
 
   test "bufSize = 4096, K = 8000, M = 8000 - drop data = 8000":
-    testPackets(8000, 8000, 4096, 8000, 0).tryGet()
+    var
+      encoder: LeoEncoder
+      decoder: LeoDecoder
+      buffers = 8000
+      parity = 8000
+      bufSize = 4096
+      dataLoses = 8000
+      parityLoses = 0
 
-  test "bufSize = 4096, K = 8000, M = 2000 - drop parity = 8000":
-    testPackets(8000, 8000, 4096, 0, 8000).tryGet()
+    try:
+      encoder = LeoEncoder.init(bufSize, buffers, parity).tryGet()
+      decoder = LeoDecoder.init(bufSize, buffers, parity).tryGet()
+      testPackets(buffers, parity, bufSize, dataLoses, parityLoses, encoder, decoder).tryGet()
+    finally:
+      encoder.free()
+      decoder.free()
+
+  test "bufSize = 4096, K = 8000, M = 8000 - drop parity = 8000":
+    var
+      encoder: LeoEncoder
+      decoder: LeoDecoder
+      buffers = 8000
+      parity = 8000
+      bufSize = 4096
+      dataLoses = 0
+      parityLoses = 8000
+
+    try:
+      encoder = LeoEncoder.init(bufSize, buffers, parity).tryGet()
+      decoder = LeoDecoder.init(bufSize, buffers, parity).tryGet()
+      testPackets(buffers, parity, bufSize, dataLoses, parityLoses, encoder, decoder).tryGet()
+    finally:
+      encoder.free()
+      decoder.free()
 
   test "bufSize = 4096, K = 8000, M = 8000 - drop data = 4000, parity = 4000":
-    testPackets(8000, 8000, 4096, 4000, 4000).tryGet()
+    var
+      encoder: LeoEncoder
+      decoder: LeoDecoder
+      buffers = 8000
+      parity = 8000
+      bufSize = 4096
+      dataLoses = 4000
+      parityLoses = 4000
+
+    try:
+      encoder = LeoEncoder.init(bufSize, buffers, parity).tryGet()
+      decoder = LeoDecoder.init(bufSize, buffers, parity).tryGet()
+      testPackets(buffers, parity, bufSize, dataLoses, parityLoses, encoder, decoder).tryGet()
+    finally:
+      encoder.free()
+      decoder.free()
+
+suite "Leopard use same encoder/decoder multiple times":
+    var
+      encoder: LeoEncoder
+      decoder: LeoDecoder
+
+    try:
+      encoder = LeoEncoder.init(4096, 800, 800).tryGet()
+      decoder = LeoDecoder.init(4096, 800, 800).tryGet()
+      for i in 0..10:
+        let lost = 40 * i
+        test "Encode/Decode using same encoder/decoder - lost data = " & $lost & " lost parity = " & $lost:
+          testPackets(800, 800, 4096, 40 * i, 40 * i, encoder, decoder).tryGet()
+    finally:
+      encoder.free()
+      decoder.free()
