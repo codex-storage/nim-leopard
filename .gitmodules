@@ -1,5 +1,5 @@
 [submodule "vendor/leopard"]
 	path = vendor/leopard
-	url = https://github.com/catid/leopard.git
+	url = https://github.com/status-im/leopard.git
 	ignore = untracked
 	branch = master
