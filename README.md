@@ -39,7 +39,7 @@ When nim-leopard is installed with `nimble install leopard`, or as a dependency 
 
 If the nim-leopard repo is cloned directly, then before running `nimble develop` or `nimble install` in the root of the clone, it's necessary to init the submodule
 ```text
-$ git submodule update --init
+$ git submodule update --init --recursive
 ```
 
 #### Build
