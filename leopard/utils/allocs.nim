@@ -14,12 +14,15 @@ push: {.upraises: [].}
 
 import system/ansi_c
 
-import ./cpuinfo_x86
+when defined(amd64) or defined(i386):
+  import ./cpuinfo_x86
 
 ## inspired by https://github.com/mratsim/weave/blob/master/weave/memory/allocs.nim
 
-let
-  LeoAlignBytes* = if hasAvx2(): 32'u else: 16'u
+when defined(amd64) or defined(i386):
+  let LeoAlignBytes* = if hasAvx2(): 32'u else: 16'u
+else:
+  let LeoAlignBytes* = 16'u
 
 when defined(windows):
   proc alignedAllocWindows(size, alignment: csize_t): pointer
