@@ -20,7 +20,7 @@ $ nimble install leopard
 ```
 In a project's `.nimble` file
 ```nim
-requires "leopard >= 0.0.1 & < 0.0.2"
+requires "leopard >= 0.0.2 & < 0.0.3"
 ```
 In a [nimbus-build-system](https://github.com/status-im/nimbus-build-system) project
 ```text
