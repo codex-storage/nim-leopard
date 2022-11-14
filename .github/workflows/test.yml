@@ -137,9 +137,9 @@ jobs:
             touch tests/testleopard
           fi
           if [[ ${{ matrix.platform.os }} = macos ]]; then
-            export PATH="$(brew --prefix)/opt/llvm/bin:${PATH}"
-            export LDFLAGS="-L$(brew --prefix)/opt/libomp/lib -L$(brew --prefix)/opt/llvm/lib -Wl,-rpath,$(brew --prefix)/opt/llvm/lib"
-            compiler_extra_options="-d:LeopardCmakeFlags='-DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=$(brew --prefix)/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=$(brew --prefix)/opt/llvm/bin/clang++' -d:LeopardExtraCompilerlags='-fopenmp' -d:LeopardExtraLinkerFlags='-fopenmp -L$(brew --prefix)/opt/libomp/lib'"
+            export PATH="$(brew --prefix llvm@14)/bin:${PATH}"
+            export LDFLAGS="-L$(brew --prefix libomp)/lib -L$(brew --prefix llvm@14)/lib -Wl,-rpath,$(brew --prefix llvm@14)/lib"
+            compiler_extra_options="-d:LeopardCmakeFlags='-DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=$(brew --prefix llvm@14)/bin/clang -DCMAKE_CXX_COMPILER=$(brew --prefix llvm@14)/bin/clang++' -d:LeopardExtraCompilerlags='-fopenmp' -d:LeopardExtraLinkerFlags='-fopenmp -L$(brew --prefix libomp)/lib'"
           fi
           if [[ ${{ matrix.nim_version }} = 1.2.* ]]; then
             eval nimble --verbose test -d:release --gc:refc ${compiler_extra_options}

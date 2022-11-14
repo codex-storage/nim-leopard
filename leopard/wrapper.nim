@@ -123,7 +123,7 @@ static:
       discard bash("mkdir -p", buildDirUnix)
       let cmd =
         @["cd", buildDirUnix, "&& cmake", leopardDirUnix, LeopardCmakeFlags,
-          "&& make"]
+          "&& make libleopard"]
       echo "\nBuilding Leopard-RS: " & cmd.join(" ")
       let (output, exitCode) = bashEx cmd
       echo output
@@ -136,7 +136,7 @@ static:
       discard gorge "mkdir -p " & buildDir
       let cmd =
         "cd " & buildDir & " && cmake " & LeopardDir & " " & LeopardCmakeFlags &
-        " && make"
+        " && make libleopard"
       echo "\nBuilding Leopard-RS: " & cmd
       let (output, exitCode) = gorgeEx cmd
       echo output
