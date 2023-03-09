@@ -50,7 +50,8 @@ jobs:
           brew update
           brew install \
             findutils \
-            libomp
+            libomp \
+            llvm@14
 
       - name: Install tools and libraries via MSYS2 (Windows)
         if: matrix.platform.os == 'windows'
