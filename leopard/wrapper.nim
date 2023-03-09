@@ -144,8 +144,8 @@ static:
         discard gorge "rm -rf " & buildDir
         raise (ref Defect)(msg: "Failed to build Leopard-RS")
 
-{.passC: LeopardCompilerFlags & " " & LeopardExtraCompilerFlags.}
-{.passL: LeopardLinkerFlags & " " & LeopardExtraLinkerFlags.}
+{.passc: LeopardCompilerFlags & " " & LeopardExtraCompilerFlags.}
+{.passl: LeopardLinkerFlags & " " & LeopardExtraLinkerFlags.}
 
 {.pragma: leo, cdecl, header: LeopardHeader.}
 
@@ -240,7 +240,7 @@ proc leoEncode*(
 ##
 ##     leo_decode_work_count()
 ##
-##     Calculate the number of work_data buffers to provide to leo_decode().
+##     Calculate the number of work_data buffers to provide to leoDecode().
 ##
 ##     The sum of original_count + recovery_count must not exceed 65536.
 ##
@@ -251,7 +251,7 @@ proc leoEncode*(
 proc leoDecodeWorkCount*(originalCount: cuint; recoveryCount: cuint): cuint
   {.leo, importc: "leo_decode_work_count".}
 ##
-##     leo_decode()
+##     leoDecode()
 ##
 ##     Decode original data from recovery data.
 ##

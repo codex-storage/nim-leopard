@@ -143,7 +143,7 @@ func decode*(
       parityPtr[i] = nil
 
   let
-    res = leo_decode(
+    res = leoDecode(
       self.bufSize.culonglong,
       self.buffers.cuint,
       self.parity.cuint,
@@ -218,7 +218,7 @@ proc init[TT: Leo](
     # concurrently instantiate the library twice, and
     # might end up with two distinct versions - not a big
     # deal but will defeat the purpose of this `once` block
-    if (let res = leoinit(); res.ord != LeopardSuccess.ord):
+    if (let res = leoInit(); res.ord != LeopardSuccess.ord):
       return err(leoResultString(res.LeopardResult))
 
   var
