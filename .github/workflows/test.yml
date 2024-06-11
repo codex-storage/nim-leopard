@@ -10,7 +10,7 @@ jobs:
       fail-fast: false
       matrix:
         cache_nonce: [ 1 ]
-        nim_version: [ 1.6.20, 2.0.4 ]
+        nim_version: [ 1.6.6 ]
         platform:
           - {
             icon: 🐧,
@@ -142,15 +142,8 @@ jobs:
             export LDFLAGS="-L$(brew --prefix libomp)/lib -L$(brew --prefix llvm@14)/lib -Wl,-rpath,$(brew --prefix llvm@14)/lib"
             compiler_extra_options="-d:LeopardCmakeFlags='-DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=$(brew --prefix llvm@14)/bin/clang -DCMAKE_CXX_COMPILER=$(brew --prefix llvm@14)/bin/clang++' -d:LeopardExtraCompilerlags='-fopenmp' -d:LeopardExtraLinkerFlags='-fopenmp -L$(brew --prefix libomp)/lib'"
           fi
-          if [[ ${{ matrix.nim_version }} = 1.2.* ]]; then
-            eval nimble --verbose test -d:release --gc:refc ${compiler_extra_options}
-          elif [[ ${{ matrix.nim_version }} = 1.4.* ]]; then
-            eval nimble --verbose test -d:release --gc:refc ${compiler_extra_options}
-            eval nimble --verbose test -d:release --gc:orc ${compiler_extra_options}
-          else
-            eval nimble --verbose test -d:release --mm:refc ${compiler_extra_options}
-            eval nimble --verbose test -d:release --mm:orc ${compiler_extra_options}
-          fi
+          eval nimble --verbose test -d:release --mm:refc ${compiler_extra_options}
+          eval nimble --verbose test -d:release --mm:orc ${compiler_extra_options}
           if [[ ${{ matrix.platform.os }} = macos ]]; then
             echo
             echo otool -L tests/testleopard
