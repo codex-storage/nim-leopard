@@ -1,28 +1,82 @@
-name: Tests
-
+name: CI
 on:
   push:
     branches:
       - master
   pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  test:
-    name: Run tests
-    runs-on: ubuntu-latest
+  build:
+    timeout-minutes: 90
     strategy:
+      fail-fast: false
       matrix:
-        nim: [1.6.16, stable]
+        target:
+          - os: linux
+            cpu: amd64
+          - os: linux
+            cpu: i386
+          - os: macos
+            cpu: amd64
+          - os: windows
+            cpu: amd64
+          #- os: windows
+            #cpu: i386
+        branch: [version-1-6]
+        include:
+          - target:
+              os: linux
+            builder: ubuntu-20.04
+            shell: bash
+          - target:
+              os: macos
+            builder: macos-12
+            shell: bash
+          - target:
+              os: windows
+            builder: windows-2019
+            shell: msys2 {0}
+
+    defaults:
+      run:
+        shell: ${{ matrix.shell }}
+
+    name: '${{ matrix.target.os }}-${{ matrix.target.cpu }} (Nim ${{ matrix.branch }})'
+    runs-on: ${{ matrix.builder }}
+    continue-on-error: ${{ matrix.branch == 'devel' }}
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          submodules: true
 
-    - name: Install Nim
-      uses: iffy/install-nim@v4
-      with:
-        version: ${{ matrix.nim }}
-    - name: Build
-      run: nimble install -y
+      - name: Setup Nim
+        uses: "./.github/actions/install_nim"
+        with:
+          os: ${{ matrix.target.os }}
+          cpu: ${{ matrix.target.cpu }}
+          shell: ${{ matrix.shell }}
+          nim_branch: ${{ matrix.branch }}
 
-    - name: Test
-      run: nimble test -y
+      - name: Restore deps from cache
+        id: deps-cache
+        uses: actions/cache@v3
+        with:
+          path: nimbledeps
+          key: nimbledeps-${{ hashFiles('.pinned') }}
+
+      - name: Install deps
+        if: ${{ steps.deps-cache.outputs.cache-hit != 'true' }}
+        run: |
+          nimble install_pinned
+
+      - name: Run tests
+        run: |
+          nim --version
+          nimble --version
+          nimble test
