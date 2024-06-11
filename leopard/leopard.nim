@@ -142,15 +142,18 @@ func decode*(
     else:
       parityPtr[i] = nil
 
-  let
-    res = leoDecode(
-      self.bufSize.culonglong,
-      self.buffers.cuint,
-      self.parity.cuint,
-      self.decodeBufferCount.cuint,
-      cast[ptr pointer](addr dataPtr[0]),
-      cast[ptr pointer](addr parityPtr[0]),
-      cast[ptr pointer](addr self.decodeBufferPtr[0]))
+  let res =
+    if dataPtr.len == 0 or parityPtr.len == 0 or self.decodeBufferPtr.len == 0:
+      LeopardInvalidInput
+    else:
+      leoDecode(
+        self.bufSize.culonglong,
+        self.buffers.cuint,
+        self.parity.cuint,
+        self.decodeBufferCount.cuint,
+        cast[ptr pointer](addr dataPtr[0]),
+        cast[ptr pointer](addr parityPtr[0]),
+        cast[ptr pointer](addr self.decodeBufferPtr[0]))
 
   if ord(res) != ord(LeopardSuccess):
     return err(leoResultString(res.LeopardResult))
