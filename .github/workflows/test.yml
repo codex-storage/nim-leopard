@@ -15,23 +15,23 @@ jobs:
           - {
             icon: 🐧,
             label: Linux,
-            os: ubuntu,
+            os: ubuntu-latest,
             shell: bash --noprofile --norc -eo pipefail
           }
           - {
             icon: 🍎,
             label: macOS,
-            os: macos,
+            os: macos-13,
             shell: bash --noprofile --norc -eo pipefail
           }
           - {
             icon: 🏁,
             label: Windows,
-            os: windows,
+            os: windows-latest,
             shell: msys2
           }
     name: ${{ matrix.platform.icon }} ${{ matrix.platform.label }} - Nim v${{ matrix.nim_version }}
-    runs-on: ${{ matrix.platform.os }}-latest
+    runs-on: ${{ matrix.platform.os }}
     defaults:
       run:
         shell: ${{ matrix.platform.shell }} {0}
