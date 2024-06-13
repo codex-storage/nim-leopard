@@ -10,7 +10,7 @@ jobs:
       fail-fast: false
       matrix:
         cache_nonce: [ 1 ]
-        nim_version: [ 1.6.20, stable ]
+        nim_version: [ 1.6.20 ] # add stable for testing 2.0+
         platform:
           - {
             icon: 🐧,
