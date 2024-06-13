@@ -15,23 +15,26 @@ jobs:
           - {
             icon: 🐧,
             label: Linux,
-            os: ubuntu-latest,
+            os: ubuntu,
+            runner: ubuntu-latest,
             shell: bash --noprofile --norc -eo pipefail
           }
           - {
             icon: 🍎,
             label: macOS,
-            os: macos-13,
+            os: macos,
+            runner: macos-13, # x86
             shell: bash --noprofile --norc -eo pipefail
           }
           - {
             icon: 🏁,
             label: Windows,
-            os: windows-latest,
+            os: windows,
+            runner: windows-latest,
             shell: msys2
           }
     name: ${{ matrix.platform.icon }} ${{ matrix.platform.label }} - Nim v${{ matrix.nim_version }}
-    runs-on: ${{ matrix.platform.os }}
+    runs-on: ${{ matrix.platform.runner }}
     defaults:
       run:
         shell: ${{ matrix.platform.shell }} {0}
@@ -51,7 +54,7 @@ jobs:
           brew install \
             findutils \
             libomp \
-            llvm@14
+            llvm@17
 
       - name: Install tools and libraries via MSYS2 (Windows)
         if: matrix.platform.os == 'windows'
@@ -138,9 +141,9 @@ jobs:
             touch tests/testleopard
           fi
           if [[ ${{ matrix.platform.os }} = macos ]]; then
-            export PATH="$(brew --prefix llvm@14)/bin:${PATH}"
-            export LDFLAGS="-L$(brew --prefix libomp)/lib -L$(brew --prefix llvm@14)/lib -Wl,-rpath,$(brew --prefix llvm@14)/lib"
-            compiler_extra_options="-d:LeopardCmakeFlags='-DENABLE_OPENMP=off -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=$(brew --prefix llvm@14)/bin/clang -DCMAKE_CXX_COMPILER=$(brew --prefix llvm@14)/bin/clang++' -d:LeopardExtraCompilerlags='-fopenmp' -d:LeopardExtraLinkerFlags='-fopenmp -L$(brew --prefix libomp)/lib'"
+            export PATH="$(brew --prefix llvm@17)/bin:${PATH}"
+            export LDFLAGS="-L$(brew --prefix libomp)/lib -L$(brew --prefix llvm@17)/lib -Wl,-rpath,$(brew --prefix llvm@17)/lib"
+            compiler_extra_options="-d:LeopardCmakeFlags='-DCMAKE_BUILD_TYPE=Release -DENABLE_OPENMP=off -DCMAKE_C_COMPILER=$(brew --prefix llvm@17)/bin/clang -DCMAKE_CXX_COMPILER=$(brew --prefix llvm@17)/bin/clang++' -d:LeopardExtraCompilerlags='-fopenmp' -d:LeopardExtraLinkerFlags='-fopenmp -L$(brew --prefix libomp)/lib'"
           fi
           eval nimble --verbose test -d:release --mm:refc ${compiler_extra_options}
           eval nimble --verbose test -d:release --mm:orc ${compiler_extra_options}
