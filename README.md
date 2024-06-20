@@ -10,7 +10,7 @@ Nim wrapper for [Leopard-RS](https://github.com/catid/leopard): a fast library f
 ## Requirements
 
 * Same as Leopard-RS' requirements, e.g. CMake 3.7 or newer.
-* Nim 1.2 or newer.
+* Nim 1.6 or newer.
 
 ## Installation
 
