@@ -10,28 +10,31 @@ jobs:
       fail-fast: false
       matrix:
         cache_nonce: [ 1 ]
-        nim_version: [ 1.2.18, 1.4.8, 1.6.6 ]
+        nim_version: [ 1.6.20 ] # add stable for testing 2.0+
         platform:
           - {
             icon: 🐧,
             label: Linux,
             os: ubuntu,
+            runner: ubuntu-latest,
             shell: bash --noprofile --norc -eo pipefail
           }
           - {
             icon: 🍎,
             label: macOS,
             os: macos,
+            runner: macos-13, # x86
             shell: bash --noprofile --norc -eo pipefail
           }
           - {
             icon: 🏁,
             label: Windows,
             os: windows,
+            runner: windows-latest,
             shell: msys2
           }
     name: ${{ matrix.platform.icon }} ${{ matrix.platform.label }} - Nim v${{ matrix.nim_version }}
-    runs-on: ${{ matrix.platform.os }}-latest
+    runs-on: ${{ matrix.platform.runner }}
     defaults:
       run:
         shell: ${{ matrix.platform.shell }} {0}
@@ -142,15 +145,8 @@ jobs:
             export LDFLAGS="-L$(brew --prefix libomp)/lib -L$(brew --prefix llvm@14)/lib -Wl,-rpath,$(brew --prefix llvm@14)/lib"
             compiler_extra_options="-d:LeopardCmakeFlags='-DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=$(brew --prefix llvm@14)/bin/clang -DCMAKE_CXX_COMPILER=$(brew --prefix llvm@14)/bin/clang++' -d:LeopardExtraCompilerlags='-fopenmp' -d:LeopardExtraLinkerFlags='-fopenmp -L$(brew --prefix libomp)/lib'"
           fi
-          if [[ ${{ matrix.nim_version }} = 1.2.* ]]; then
-            eval nimble --verbose test -d:release --gc:refc ${compiler_extra_options}
-          elif [[ ${{ matrix.nim_version }} = 1.4.* ]]; then
-            eval nimble --verbose test -d:release --gc:refc ${compiler_extra_options}
-            eval nimble --verbose test -d:release --gc:orc ${compiler_extra_options}
-          else
-            eval nimble --verbose test -d:release --mm:refc ${compiler_extra_options}
-            eval nimble --verbose test -d:release --mm:orc ${compiler_extra_options}
-          fi
+          eval nimble --verbose test -d:release --mm:refc ${compiler_extra_options}
+          eval nimble --verbose test -d:release --mm:orc ${compiler_extra_options}
           if [[ ${{ matrix.platform.os }} = macos ]]; then
             echo
             echo otool -L tests/testleopard
