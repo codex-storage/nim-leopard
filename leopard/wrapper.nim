@@ -67,6 +67,9 @@ import std/compilesettings
 import std/os
 import std/strutils
 
+type
+  LeoDataPtr* {.importc: "const void* const * const", bycopy.} = pointer
+
 const
   LeopardCmakeFlags {.strdefine.} =
     when defined(macosx):
@@ -225,7 +228,7 @@ proc leoEncode*(
   originalCount: cuint;
   recoveryCount: cuint;
   workCount: cuint;
-  originalData: ptr pointer;
+  originalData: LeoDataPtr;
   workData: ptr pointer): LeopardResult {.leo, importc: "leo_encode".}
   ##  Number of bytes in each data buffer
   ##  Number of original_data[] buffer pointers
@@ -277,8 +280,8 @@ proc leoDecode*(
   originalCount: cuint;
   recoveryCount: cuint;
   workCount: cuint;
-  originalData: ptr pointer;
-  recoveryData: ptr pointer;
+  originalData: LeoDataPtr;
+  recoveryData: LeoDataPtr;
   workData: ptr pointer): LeopardResult {.leo, importc: "leo_decode".}
   ##  Number of bytes in each data buffer
   ##  Number of original_data[] buffer pointers

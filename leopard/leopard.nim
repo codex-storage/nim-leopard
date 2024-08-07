@@ -12,12 +12,6 @@ push: {.upraises: [].}
 
 {.deadCodeElim: on.}
 
-# in gcc-14, incompatible-pointer-types warning was promoted to error.
-# function arguments in C of type 'const void* const * const' are seen as
-# not compatible with nim 'ptr pointer' type.
-# We use localPassC to disable this check for the compiling of nim-leopard.
-{.localPassC:"-Wno-error=incompatible-pointer-types"}
-
 import pkg/stew/results
 
 import ./wrapper
