@@ -37,11 +37,6 @@ jobs:
       run: nimble install -y
     - name: Build and run tests
       run: |
-        if [[ ${{ matrix.platform.os }} = windows ]]; then
-          touch tests/testleopard.exe
-        else
-          touch tests/testleopard
-        fi
         if [[ ${{ matrix.platform.os }} = macos ]]; then
           export PATH="$(brew --prefix llvm@14)/bin:${PATH}"
           export LDFLAGS="-L$(brew --prefix libomp)/lib -L$(brew --prefix llvm@14)/lib -Wl,-rpath,$(brew --prefix llvm@14)/lib"
