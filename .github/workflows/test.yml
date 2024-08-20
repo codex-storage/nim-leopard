@@ -44,12 +44,3 @@ jobs:
         fi
         eval nimble --verbose test -d:release --mm:refc ${compiler_extra_options}
         eval nimble --verbose test -d:release --mm:orc ${compiler_extra_options}
-        if [[ ${{ matrix.platform.os }} = macos ]]; then
-          echo
-          echo otool -L tests/testleopard
-          otool -L tests/testleopard
-        else
-          echo
-          echo ldd tests/testleopard
-          ldd tests/testleopard
-        fi
