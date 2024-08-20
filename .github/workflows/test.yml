@@ -9,18 +9,21 @@ jobs:
             icon: 🐧,
             label: Linux,
             os: ubuntu,
+            runner: ubuntu-latest,
             shell: bash --noprofile --norc -eo pipefail
           }
           - {
             icon: 🍎,
             label: macOS,
             os: macos,
+            runner: macos-13, # x86
             shell: bash --noprofile --norc -eo pipefail
           }
           - {
             icon: 🏁,
             label: Windows,
             os: windows,
+            runner: windows-latest,
             shell: msys2
           }
         nim: [1.6.18]
