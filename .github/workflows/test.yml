@@ -9,26 +9,26 @@ jobs:
             icon: 🐧,
             label: Linux,
             os: ubuntu,
-            runner: ubuntu-latest,
-            shell: bash --noprofile --norc -eo pipefail
+            runner: ubuntu-latest
           }
           - {
             icon: 🍎,
             label: macOS,
             os: macos,
-            runner: macos-13, # x86
-            shell: bash --noprofile --norc -eo pipefail
+            runner: macos-13 # x86
           }
           - {
             icon: 🏁,
             label: Windows,
             os: windows,
-            runner: windows-latest,
-            shell: msys2
+            runner: windows-latest
           }
         nim: [1.6.18]
     name: ${{ matrix.platform.icon }} ${{ matrix.platform.label }} - Nim v${{ matrix.nim }}
     runs-on: ${{ matrix.platform.os }}-latest
+    defaults:
+      run:
+        shell: bash
     steps:
     - uses: actions/checkout@v4
       with:
