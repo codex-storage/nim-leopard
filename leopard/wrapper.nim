@@ -68,7 +68,7 @@ import std/os
 import std/strutils
 
 type
-  LeoDataPtr* {.importc: "const void* const * const", bycopy.} = pointer
+  LeoDataPtr* {.importc: "const void* const*", bycopy.} = pointer
 
 const
   LeopardCmakeFlags {.strdefine.} =

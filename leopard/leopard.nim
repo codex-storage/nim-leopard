@@ -77,7 +77,7 @@ func encode*(
       self.buffers.cuint,
       self.parity.cuint,
       self.workBufferCount.cuint,
-      cast[ptr pointer](addr self.dataBufferPtr[0]),
+      cast[LeoDataPtr](addr self.dataBufferPtr[0]),
       cast[ptr pointer](addr self.workBufferPtr[0]))
 
   if ord(res) != ord(LeopardSuccess):
@@ -148,8 +148,8 @@ func decode*(
       self.buffers.cuint,
       self.parity.cuint,
       self.decodeBufferCount.cuint,
-      cast[ptr pointer](addr dataPtr[0]),
-      cast[ptr pointer](addr parityPtr[0]),
+      cast[LeoDataPtr](addr dataPtr[0]),
+      cast[LeoDataPtr](addr parityPtr[0]),
       cast[ptr pointer](addr self.decodeBufferPtr[0]))
 
   if ord(res) != ord(LeopardSuccess):
