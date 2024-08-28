@@ -36,6 +36,9 @@ type
     dataBufferPtr: seq[LeoBufferPtr]      # buffer where data is copied before encoding
     workBufferCount: int                  # number of parity work buffers
     workBufferPtr: seq[LeoBufferPtr]      # buffer where parity data is written during encoding or before decoding
+
+    dataBufferNil: seq[bool]             # true represents Nil in dataBufferPtr
+    workBufferNil: seq[bool]             # true represents nil in workBufferPtr
     case kind: LeoCoderKind
     of LeoCoderKind.Decoder:
       decodeBufferCount: int              # number of decoding work buffers
@@ -46,30 +49,32 @@ type
   LeoEncoder* = object of Leo
   LeoDecoder* = object of Leo
 
-func encode*(
-  self: var LeoEncoder,
-  data,
-  parity: var openArray[seq[byte]]): Result[void, cstring] =
-  ## Encode a list of buffers in `data` into a number of `bufSize` sized
-  ## `parity` buffers
-  ##
-  ## `data`   - list of original data `buffers` of size `bufSize`
-  ## `parity` - list of parity `buffers` of size `bufSize`
-  ##
 
+func prepareEncode*(
+  self: var LeoEncoder,
+  data: var openArray[seq[byte]]
+  ): Result[void, cstring] =
+  ## Copy `data` into internal encode buffer
+  ##
+  
   if data.len != self.buffers:
     return err("Number of data buffers should match!")
 
-  if parity.len != self.parity:
-    return err("Number of parity buffers should match!")
+  # copy data into aligned buffer
+  for i in 0..<self.buffers:
+    copyMem(self.dataBufferPtr[i], addr data[i][0], self.bufSize)
+  
+  ok()
+
+func encodePrepared*(
+  self: var LeoEncoder
+  ): Result[void, cstring] =
+  ## Encode using previously prepared buffer (using `prepareEncode`)
+  ##
 
   # zero encode work buffer to avoid corrupting with previous run
   for i in 0..<self.workBufferCount:
     zeroMem(self.workBufferPtr[i], self.bufSize)
-
-  # copy data into aligned buffer
-  for i in 0..<data.len:
-    copyMem(self.dataBufferPtr[i], addr data[i][0], self.bufSize)
 
   let
     res = leoEncode(
@@ -83,10 +88,138 @@ func encode*(
   if ord(res) != ord(LeopardSuccess):
     return err(leoResultString(res.LeopardResult))
 
+  ok()
+
+func readParity*(
+  self: var LeoEncoder,
+  parity: var openArray[seq[byte]]
+): Result[void, cstring] =
+  ## Copies previously encoded parity data into `parity` buffer
+  ##
+
+  if parity.len != self.parity:
+    return err("Number of parity buffers should match!")
+
   for i in 0..<parity.len:
     copyMem(addr parity[i][0], self.workBufferPtr[i], self.bufSize)
 
-  return ok()
+  ok()
+
+func encode*(
+  self: var LeoEncoder,
+  data,
+  parity: var openArray[seq[byte]]): Result[void, cstring] =
+  ## Encode a list of buffers in `data` into a number of `bufSize` sized
+  ## `parity` buffers
+  ##
+  ## `data`   - list of original data `buffers` of size `bufSize`
+  ## `parity` - list of parity `buffers` of size `bufSize`
+  ##
+
+  let res = self.prepareEncode(data)
+
+  if res.isErr():
+    return res
+
+  let res2 = self.encodePrepared()
+
+  if res2.isErr():
+    return res2
+
+  self.readParity(parity)
+
+func prepareDecode*(
+  self: var LeoDecoder,
+  data,
+  parity: var openArray[seq[byte]]
+  ): Result[void, cstring] =
+
+  if data.len != self.buffers:
+    return err("Number of data buffers should match!")
+
+  if parity.len != self.parity:
+    return err("Number of parity buffers should match!")
+
+  # clean out work and data buffers
+  for i in 0..<self.buffers:
+    zeroMem(self.dataBufferPtr[i], self.bufSize)
+
+  for i in 0..<self.workBufferCount:
+    zeroMem(self.workBufferPtr[i], self.bufSize)
+
+  # copy data into aligned buffer
+  for i in 0..<data.len:
+    if data[i].len > 0:
+      copyMem(self.dataBufferPtr[i], addr data[i][0], self.bufSize)
+      self.dataBufferNil[i] = false
+    else:
+      self.dataBufferNil[i] = true
+
+  # copy parity into aligned buffer
+  for i in 0..<self.workBufferCount:
+    if i < parity.len and parity[i].len > 0:
+      copyMem(self.workBufferPtr[i], addr parity[i][0], self.bufSize)
+      self.workBufferNil[i] = false
+    else:
+      self.workBufferNil[i] = true
+
+  ok()
+
+func decodePrepared*(
+  self: var LeoDecoder
+  ): Result[void, cstring] =
+
+  for i in 0..<self.decodeBufferCount:
+    zeroMem(self.decodeBufferPtr[i], self.bufSize)
+
+  # this is needed because erasures are nil pointers
+  var
+    dataPtr = newSeq[LeoBufferPtr](self.buffers)
+    parityPtr = newSeq[LeoBufferPtr](self.workBufferCount)
+
+  # copy data into aligned buffer
+  for i in 0..<self.buffers:
+    if self.dataBufferNil[i]:
+      dataPtr[i] = nil 
+    else:
+      dataPtr[i] = self.dataBufferPtr[i]
+
+  # copy parity into aligned buffer
+  for i in 0..<self.workBufferCount:
+    if self.workBufferNil[i]:
+      parityPtr[i] = nil
+    else:
+      parityPtr[i] = self.workBufferPtr[i]
+      
+  let
+    res = leoDecode(
+      self.bufSize.culonglong,
+      self.buffers.cuint,
+      self.parity.cuint,
+      self.decodeBufferCount.cuint,
+      cast[LeoDataPtr](addr dataPtr[0]),
+      cast[LeoDataPtr](addr parityPtr[0]),
+      cast[ptr pointer](addr self.decodeBufferPtr[0]))
+
+  if ord(res) != ord(LeopardSuccess):
+    return err(leoResultString(res.LeopardResult))
+
+  ok()
+
+func readDecoded*(
+  self: var LeoDecoder,
+  recovered: var openArray[seq[byte]]
+): Result[void, cstring] =
+
+  if recovered.len != self.buffers:
+    return err("Number of recovered buffers should match buffers!")
+
+  for i, wasNil in self.dataBufferNil:
+    if wasNil:
+      copyMem(addr recovered[i][0], self.decodeBufferPtr[i], self.bufSize)
+  
+  ok()
+
 
 func decode*(
   self: var LeoDecoder,
@@ -102,66 +235,25 @@ func decode*(
   ## `recovered`  - list of recovered `buffers` of size `bufSize`
   ##
 
-  if data.len != self.buffers:
-    return err("Number of data buffers should match!")
+  let res = self.prepareDecode(data, parity)
 
-  if parity.len != self.parity:
-    return err("Number of parity buffers should match!")
+  if res.isErr():
+    return res
 
-  if recovered.len != self.buffers:
-    return err("Number of recovered buffers should match buffers!")
+  let res2 = self.decodePrepared()
 
-  # clean out work and data buffers
-  for i in 0..<self.workBufferCount:
-    zeroMem(self.workBufferPtr[i], self.bufSize)
+  if res2.isErr():
+    return res2
 
-  for i in 0..<self.decodeBufferCount:
-    zeroMem(self.decodeBufferPtr[i], self.bufSize)
-
-  for i in 0..<data.len:
-    zeroMem(self.dataBufferPtr[i], self.bufSize)
-
-  # this is needed because erasures are nil pointers
-  var
-    dataPtr = newSeq[LeoBufferPtr](data.len)
-    parityPtr = newSeq[LeoBufferPtr](self.workBufferCount)
-
-  # copy data into aligned buffer
-  for i in 0..<data.len:
-    if data[i].len > 0:
-      copyMem(self.dataBufferPtr[i], addr data[i][0], self.bufSize)
-      dataPtr[i] = self.dataBufferPtr[i]
-    else:
-      dataPtr[i] = nil
-
-  # copy parity into aligned buffer
-  for i in 0..<self.workBufferCount:
-    if i < parity.len and parity[i].len > 0:
-      copyMem(self.workBufferPtr[i], addr parity[i][0], self.bufSize)
-      parityPtr[i] = self.workBufferPtr[i]
-    else:
-      parityPtr[i] = nil
-
-  let
-    res = leoDecode(
-      self.bufSize.culonglong,
-      self.buffers.cuint,
-      self.parity.cuint,
-      self.decodeBufferCount.cuint,
-      cast[LeoDataPtr](addr dataPtr[0]),
-      cast[LeoDataPtr](addr parityPtr[0]),
-      cast[ptr pointer](addr self.decodeBufferPtr[0]))
-
-  if ord(res) != ord(LeopardSuccess):
-    return err(leoResultString(res.LeopardResult))
-
-  for i, p in dataPtr:
-    if p.isNil:
-      copyMem(addr recovered[i][0], self.decodeBufferPtr[i], self.bufSize)
-
-  ok()
+  self.readDecoded(recovered)
 
 func free*(self: var Leo) =
+  if self.dataBufferNil.len > 0:
+    self.dataBufferNil.setLen(0)
+
+  if self.workBufferNil.len > 0:
+    self.workBufferNil.setLen(0)
+
   if self.workBufferPtr.len > 0:
     for i, p in self.workBufferPtr:
       if not isNil(p):
@@ -231,6 +323,9 @@ proc init[TT: Leo](
   self.workBufferCount = leoEncodeWorkCount(
     buffers.cuint,
     parity.cuint).int
+
+  self.workBufferNil.setLen(self.workBufferCount)
+  self.dataBufferNil.setLen(self.buffers)
 
   # initialize encode work buffers
   for _ in 0..<self.workBufferCount:
