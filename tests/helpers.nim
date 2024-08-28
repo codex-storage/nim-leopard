@@ -96,6 +96,8 @@ proc testPackets*(
   if parityLosses > 0:
     dropRandomIdx(parityBuf, parityLosses)
 
+  GC_fullCollect()
+
   decoder.decode(dataBuf, parityBuf, recoveredBuf).tryGet()
 
   for i, d in dataBuf:

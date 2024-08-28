@@ -1,5 +1,6 @@
 import std/random
 import std/sets
+import std/sequtils
 
 import pkg/unittest2
 import pkg/stew/results
@@ -31,8 +32,8 @@ suite "Leopard Parametrization":
   test "Should not allow encoding with invalid data buffer counts":
     var
       leo = LeoEncoder.init(64, 4, 2).tryGet()
-      data = newSeq[seq[byte]](3)
-      parity = newSeq[seq[byte]](2)
+      data = newSeqWith[seq[byte]](3, newSeq[byte](64))
+      parity = newSeqWith[seq[byte]](2, newSeq[byte](64))
 
     check:
       leo.encode(data, parity).error == "Number of data buffers should match!"
@@ -40,8 +41,8 @@ suite "Leopard Parametrization":
   test "Should not allow encoding with invalid parity buffer counts":
     var
       leo = LeoEncoder.init(64, 4, 2).tryGet()
-      data = newSeq[seq[byte]](4)
-      parity = newSeq[seq[byte]](3)
+      data = newSeqWith[seq[byte]](4, newSeq[byte](64))
+      parity = newSeqWith[seq[byte]](3, newSeq[byte](64))
 
     check:
       leo.encode(data, parity).error == "Number of parity buffers should match!"
@@ -49,9 +50,9 @@ suite "Leopard Parametrization":
   test "Should not allow decoding with invalid data buffer counts":
     var
       leo = LeoDecoder.init(64, 4, 2).tryGet()
-      data = newSeq[seq[byte]](3)
-      parity = newSeq[seq[byte]](2)
-      recovered = newSeq[seq[byte]](3)
+      data = newSeqWith[seq[byte]](3, newSeq[byte](64))
+      parity = newSeqWith[seq[byte]](2, newSeq[byte](64))
+      recovered = newSeqWith[seq[byte]](3, newSeq[byte](64))
 
     check:
       leo.decode(data, parity, recovered).error == "Number of data buffers should match!"
@@ -59,9 +60,9 @@ suite "Leopard Parametrization":
   test "Should not allow decoding with invalid data buffer counts":
     var
       leo = LeoDecoder.init(64, 4, 2).tryGet()
-      data = newSeq[seq[byte]](4)
-      parity = newSeq[seq[byte]](1)
-      recovered = newSeq[seq[byte]](3)
+      data = newSeqWith[seq[byte]](4, newSeq[byte](64))
+      parity = newSeqWith[seq[byte]](1, newSeq[byte](64))
+      recovered = newSeqWith[seq[byte]](3, newSeq[byte](64))
 
     check:
       leo.decode(data, parity, recovered).error == "Number of parity buffers should match!"
@@ -69,9 +70,9 @@ suite "Leopard Parametrization":
   test "Should not allow decoding with invalid data buffer counts":
     var
       leo = LeoDecoder.init(64, 4, 2).tryGet()
-      data = newSeq[seq[byte]](4)
-      parity = newSeq[seq[byte]](2)
-      recovered = newSeq[seq[byte]](3)
+      data = newSeqWith[seq[byte]](4, newSeq[byte](64))
+      parity = newSeqWith[seq[byte]](2, newSeq[byte](64))
+      recovered = newSeqWith[seq[byte]](3, newSeq[byte](64))
 
     check:
       leo.decode(data, parity, recovered).error == "Number of recovered buffers should match buffers!"
