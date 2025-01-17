@@ -32,7 +32,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
       with:
-        submodules: true
+        submodules: recursive
     - uses: iffy/install-nim@v4
       with:
         version: ${{ matrix.nim }}
