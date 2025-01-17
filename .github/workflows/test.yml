@@ -15,7 +15,7 @@ jobs:
             icon: 🍎,
             label: macOS,
             os: macos,
-            runner: macos-13 # x86
+            runner: macos-14-arm64
           }
           - {
             icon: 🏁,
