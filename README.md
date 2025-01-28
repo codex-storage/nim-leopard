@@ -70,7 +70,7 @@ So, on macOS, when running `nimble test` of nim-leopard or compiling a project t
   ```
   and these flags should be passed to `nim c`
   ```text
-  -d:LeopardCmakeFlags="-DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=$(brew --prefix)/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=$(brew --prefix)/opt/llvm/bin/clang++" -d:LeopardExtraCompilerlags="-fopenmp" -d:LeopardExtraLinkerFlags="-fopenmp -L$(brew --prefix)/opt/libomp/lib"
+  -d:LeopardCmakeFlags="-DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=$(brew --prefix)/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=$(brew --prefix)/opt/llvm/bin/clang++" -d:LeopardExtraCompilerFlags="-fopenmp" -d:LeopardExtraLinkerFlags="-fopenmp -L$(brew --prefix)/opt/libomp/lib"
   ```
 
 ## Usage
