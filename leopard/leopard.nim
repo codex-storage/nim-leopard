@@ -48,6 +48,48 @@ type
 
 func encode*(
   self: var LeoEncoder,
+  data,parity: ptr UncheckedArray[ptr UncheckedArray[byte]],
+  dataLen,parityLen: int ): Result[void, cstring] =
+  ## Encode a list of buffers in `data` into a number of `bufSize` sized
+  ## `parity` buffers
+  ##
+  ## `data`   - list of original data `buffers` of size `bufSize`
+  ## `parity` - list of parity `buffers` of size `bufSize`
+  ##
+
+  if dataLen != self.buffers:
+    return err("Number of data buffers should match!")
+
+  if parityLen != self.parity:
+    return err("Number of parity buffers should match!")
+
+  # zero encode work buffer to avoid corrupting with previous run
+  for i in 0..<self.workBufferCount:
+    zeroMem(self.workBufferPtr[i], self.bufSize)
+
+  # copy data into aligned buffer
+  for i in 0..<dataLen:
+    copyMem(self.dataBufferPtr[i], addr data[i][0], self.bufSize)
+
+  let
+    res = leoEncode(
+      self.bufSize.culonglong,
+      self.buffers.cuint,
+      self.parity.cuint,
+      self.workBufferCount.cuint,
+      cast[LeoDataPtr](addr self.dataBufferPtr[0]),
+      cast[ptr pointer](addr self.workBufferPtr[0]))
+
+  if ord(res) != ord(LeopardSuccess):
+    return err(leoResultString(res.LeopardResult))
+
+  for i in 0..<parityLen:
+    copyMem(parity[i], self.workBufferPtr[i], self.bufSize)
+
+  return ok()
+
+func encode*(
+  self: var LeoEncoder,
   data,
   parity: var openArray[seq[byte]]): Result[void, cstring] =
   ## Encode a list of buffers in `data` into a number of `bufSize` sized
