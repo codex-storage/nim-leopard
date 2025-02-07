@@ -203,6 +203,81 @@ func decode*(
 
   ok()
 
+
+func decode*(
+  self: var LeoDecoder,
+  data,
+  parity,
+  recovered: ptr UncheckedArray[ptr UncheckedArray[byte]],
+  dataLen,parityLen,recoveredLen: int): Result[void, cstring] =
+  ## Decode a list of buffers in `data` and `parity` into a list
+  ## of `recovered` buffers of `bufSize`. The list of `recovered`
+  ## buffers should be match the `Leo.buffers`
+  ##
+  ## `data`       - list of original data `buffers` of size `bufSize`
+  ## `parity`     - list of parity `buffers` of size `bufSize`
+  ## `recovered`  - list of recovered `buffers` of size `bufSize`
+  ##
+
+  if dataLen != self.buffers:
+    return err("Number of data buffers should match!")
+
+  if parityLen != self.parity:
+    return err("Number of parity buffers should match!")
+
+  if recoveredLen != self.buffers:
+    return err("Number of recovered buffers should match buffers!")
+
+  # clean out work and data buffers
+  for i in 0..<self.workBufferCount:
+    zeroMem(self.workBufferPtr[i], self.bufSize)
+
+  for i in 0..<self.decodeBufferCount:
+    zeroMem(self.decodeBufferPtr[i], self.bufSize)
+
+  for i in 0..<dataLen:
+    zeroMem(self.dataBufferPtr[i], self.bufSize)
+
+  # this is needed because erasures are nil pointers
+  var
+    dataPtr = newSeq[LeoBufferPtr](dataLen)
+    parityPtr = newSeq[LeoBufferPtr](self.workBufferCount)
+
+  # copy data into aligned buffer
+  for i in 0..<dataLen:
+    if not data[i].isNil:
+      copyMem(self.dataBufferPtr[i],addr data[i][0], self.bufSize)
+      dataPtr[i] = self.dataBufferPtr[i]
+    else:
+      dataPtr[i] = nil
+
+  # copy parity into aligned buffer
+  for i in 0..<self.workBufferCount:
+    if i < parityLen and not parity[i].isNil:
+      copyMem(self.workBufferPtr[i], addr parity[i][0], self.bufSize)
+      parityPtr[i] = self.workBufferPtr[i]
+    else:
+      parityPtr[i] = nil
+
+  let
+    res = leoDecode(
+      self.bufSize.culonglong,
+      self.buffers.cuint,
+      self.parity.cuint,
+      self.decodeBufferCount.cuint,
+      cast[LeoDataPtr](addr dataPtr[0]),
+      cast[LeoDataPtr](addr parityPtr[0]),
+      cast[ptr pointer](addr self.decodeBufferPtr[0]))
+
+  if ord(res) != ord(LeopardSuccess):
+    return err(leoResultString(res.LeopardResult))
+
+  for i, p in dataPtr:
+    if p.isNil:
+      copyMem(addr recovered[i][0], self.decodeBufferPtr[i], self.bufSize)
+
+  ok()
+
 func free*(self: var Leo) =
   if self.workBufferPtr.len > 0:
     for i, p in self.workBufferPtr:
