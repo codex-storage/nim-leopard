@@ -24,22 +24,22 @@ proc randomCRCPacket*(data: var openArray[byte]) =
 
     copyMem(addr data[4], unsafeAddr crc, sizeof(crc))
 
-proc checkCRCPacket*(data: openArray[byte]): bool =
-  if data.len < 16:
-    for d in data[1..data.high]:
-      if d != data[0]:
+proc checkCRCPacket*(data: ptr UncheckedArray[byte], len: int): bool =
+  if len < 16:
+    for i in 1..<len:
+      if data[i] != data[0]:
         raise (ref Defect)(msg: "Packet don't match")
   else:
     var
-      crc = data.len.uint32
+      crc = len.uint32
       packCrc: uint32
       packSize: uint32
 
     copyMem(addr packSize, unsafeAddr data[0], sizeof(packSize))
-    if packSize != data.len.uint:
+    if packSize != len.uint:
       raise (ref Defect)(msg: "Packet size don't match!")
 
-    for i in 4..<data.len:
+    for i in 4..<len:
       let v = data[i]
       crc = (crc shl 3) and (crc shr (32 - 3))
       crc += v
@@ -49,18 +49,42 @@ proc checkCRCPacket*(data: openArray[byte]): bool =
     if packCrc == crc:
       return true
 
-proc dropRandomIdx*(bufs: var openArray[seq[byte]], dropCount: int) =
+proc dropRandomIdx*(bufs: ptr UncheckedArray[ptr UncheckedArray[byte]], bufsLen,dropCount: int) =
   var
     count = 0
     dups: seq[int]
-    size = bufs.len
+    size = bufsLen
 
   while count < dropCount:
     let i = rand(0..<size)
     if dups.find(i) == -1:
       dups.add(i)
-      bufs[i].setLen(0)
+      bufs[i]=nil
       count.inc
+
+proc createDoubleArray*(
+    outerLen, innerLen: int
+): ptr UncheckedArray[ptr UncheckedArray[byte]] =
+  # Allocate outer array
+  result = cast[ptr UncheckedArray[ptr UncheckedArray[byte]]](alloc0(
+    sizeof(ptr UncheckedArray[byte]) * outerLen
+  ))
+
+  # Allocate each inner array
+  for i in 0 ..< outerLen:
+    result[i] = cast[ptr UncheckedArray[byte]](alloc0(sizeof(byte) * innerLen))
+
+proc freeDoubleArray*(
+    arr: ptr UncheckedArray[ptr UncheckedArray[byte]], outerLen: int
+) =
+  # Free each inner array
+  for i in 0 ..< outerLen:
+    if not arr[i].isNil:
+      dealloc(arr[i])
+
+  # Free outer array
+  if not arr.isNil:
+    dealloc(arr)
 
 proc testPackets*(
   buffers,
@@ -72,35 +96,37 @@ proc testPackets*(
   decoder: var LeoDecoder): Result[void, cstring] =
 
   var
-    dataBuf = newSeqOfCap[seq[byte]](buffers)
-    parityBuf = newSeqOfCap[seq[byte]](parity)
-    recoveredBuf = newSeqOfCap[seq[byte]](buffers)
+    dataBuf = createDoubleArray(buffers, bufSize)
+    parityBuf = createDoubleArray(parity, bufSize)
+    recoveredBuf = createDoubleArray(buffers, bufSize)
+  
+  defer: 
+    freeDoubleArray(dataBuf, buffers)
+    freeDoubleArray(parityBuf, parity)
+    freeDoubleArray(recoveredBuf, buffers)
 
-  for _ in 0..<buffers:
+
+
+  for i in 0..<buffers:
     var
       dataSeq = newSeq[byte](bufSize)
 
     randomCRCPacket(dataSeq)
-    dataBuf.add(dataSeq)
+    copyMem(dataBuf[i],addr dataSeq[0],bufSize)
 
-    recoveredBuf.add(newSeq[byte](bufSize))
-
-  for _ in 0..<parity:
-    parityBuf.add(newSeq[byte](bufSize))
-
-  encoder.encode(dataBuf, parityBuf).tryGet()
+  encoder.encode(dataBuf, parityBuf,buffers,parity).tryGet()
 
   if dataLosses > 0:
-    dropRandomIdx(dataBuf, dataLosses)
+    dropRandomIdx(dataBuf,buffers, dataLosses)
 
   if parityLosses > 0:
-    dropRandomIdx(parityBuf, parityLosses)
+    dropRandomIdx(parityBuf,parity,parityLosses)
 
-  decoder.decode(dataBuf, parityBuf, recoveredBuf).tryGet()
+  decoder.decode(dataBuf, parityBuf, recoveredBuf,buffers,parity,buffers).tryGet()
 
-  for i, d in dataBuf:
-    if d.len <= 0:
-      if not checkCRCPacket(recoveredBuf[i]):
+  for i in 0..<buffers:
+    if dataBuf[i].isNil:
+      if not checkCRCPacket(recoveredBuf[i],bufSize):
         return err(("Check failed for packet " & $i).cstring)
 
   ok()

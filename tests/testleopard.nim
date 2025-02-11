@@ -30,51 +30,74 @@ suite "Leopard Parametrization":
 
   test "Should not allow encoding with invalid data buffer counts":
     var
+      dataLen =3
+      parityLen = 2
       leo = LeoEncoder.init(64, 4, 2).tryGet()
-      data = newSeq[seq[byte]](3)
-      parity = newSeq[seq[byte]](2)
-
+      data = createDoubleArray(dataLen, 64)
+      parity = createDoubleArray(parityLen, 64)
+    defer:
+      freeDoubleArray(data, dataLen)
+      freeDoubleArray(parity, parityLen)
     check:
-      leo.encode(data, parity).error == "Number of data buffers should match!"
+      leo.encode(data, parity,dataLen,parityLen).error == "Number of data buffers should match!"
 
   test "Should not allow encoding with invalid parity buffer counts":
     var
+      dataLen =4
+      parityLen = 3
       leo = LeoEncoder.init(64, 4, 2).tryGet()
-      data = newSeq[seq[byte]](4)
-      parity = newSeq[seq[byte]](3)
+      data = createDoubleArray(dataLen, 64)
+      parity = createDoubleArray(parityLen, 64)
+    
+    defer:
+      freeDoubleArray(data, dataLen)
+      freeDoubleArray(parity, parityLen)
 
     check:
-      leo.encode(data, parity).error == "Number of parity buffers should match!"
+      leo.encode(data, parity,dataLen,parityLen).error == "Number of parity buffers should match!"
 
   test "Should not allow decoding with invalid data buffer counts":
     var
+      dataLen =3
+      parityLen = 2
       leo = LeoDecoder.init(64, 4, 2).tryGet()
-      data = newSeq[seq[byte]](3)
-      parity = newSeq[seq[byte]](2)
-      recovered = newSeq[seq[byte]](3)
+      data = createDoubleArray(dataLen, 64)
+      parity = createDoubleArray(parityLen, 64)
+      recovered = createDoubleArray(dataLen, 64)
+    
+    defer:
+      freeDoubleArray(data, dataLen)
+      freeDoubleArray(parity, parityLen)
+      freeDoubleArray(recovered, dataLen)
 
     check:
-      leo.decode(data, parity, recovered).error == "Number of data buffers should match!"
+      leo.decode(data, parity, recovered,dataLen,parityLen,dataLen).error == "Number of data buffers should match!"
 
   test "Should not allow decoding with invalid data buffer counts":
     var
+      dataLen =4
+      parityLen = 1
+      recoveredLen = 3
       leo = LeoDecoder.init(64, 4, 2).tryGet()
-      data = newSeq[seq[byte]](4)
-      parity = newSeq[seq[byte]](1)
-      recovered = newSeq[seq[byte]](3)
+      data = createDoubleArray(dataLen, 64)
+      parity = createDoubleArray(parityLen, 64)
+      recovered = createDoubleArray(recoveredLen, 64)
 
     check:
-      leo.decode(data, parity, recovered).error == "Number of parity buffers should match!"
+      leo.decode(data, parity, recovered,dataLen,parityLen,recoveredLen).error == "Number of parity buffers should match!"
 
   test "Should not allow decoding with invalid data buffer counts":
     var
+      dataLen =4
+      parityLen = 2
+      recoveredLen = 3
       leo = LeoDecoder.init(64, 4, 2).tryGet()
-      data = newSeq[seq[byte]](4)
-      parity = newSeq[seq[byte]](2)
-      recovered = newSeq[seq[byte]](3)
+      data = createDoubleArray(dataLen, 64)
+      parity = createDoubleArray(parityLen, 64)
+      recovered = createDoubleArray(recoveredLen, 64)
 
     check:
-      leo.decode(data, parity, recovered).error == "Number of recovered buffers should match buffers!"
+      leo.decode(data, parity, recovered,dataLen,parityLen,recoveredLen).error == "Number of recovered buffers should match buffers!"
 
 suite "Leopard simple Encode/Decode":
   const
@@ -86,70 +109,76 @@ suite "Leopard simple Encode/Decode":
   var
     encoder: LeoEncoder
     decoder: LeoDecoder
-    data: seq[seq[byte]]
-    parity: seq[seq[byte]]
-    recovered: seq[seq[byte]]
+    data: ptr UncheckedArray[ptr UncheckedArray[byte]]
+    parity: ptr UncheckedArray[ptr UncheckedArray[byte]]
+    recovered: ptr UncheckedArray[ptr UncheckedArray[byte]]
 
   setup:
     encoder = LeoEncoder.init(BufferSize, DataCount, ParityCount).tryGet()
     decoder = LeoDecoder.init(BufferSize, DataCount, ParityCount).tryGet()
-    data = newSeq[seq[byte]](DataCount)
-    parity = newSeq[seq[byte]](ParityCount)
-    recovered = newSeq[seq[byte]](DataCount)
+    data = createDoubleArray(DataCount, BufferSize)
+    parity = createDoubleArray(ParityCount, BufferSize)
+    recovered = createDoubleArray(DataCount, BufferSize)
 
   teardown:
+    freeDoubleArray(data, DataCount)
+    freeDoubleArray(parity, ParityCount)
+    freeDoubleArray(recovered, DataCount)
     encoder.free()
     decoder.free()
 
   test "Test 2 data loses out of 4 possible":
     for i in 0..<DataCount:
-      data[i] = newSeq[byte](BufferSize)
-      recovered[i] = newSeq[byte](BufferSize)
       var
         str = TestString & " " & $i
 
-      copyMem(addr data[i][0], addr str[0], str.len)
+      copyMem(data[i], addr str[0], str.len)
 
-    for i in 0..<ParityCount:
-      parity[i] = newSeq[byte](BufferSize)
 
-    encoder.encode(data, parity).tryGet()
+    encoder.encode(data, parity,DataCount,ParityCount).tryGet()
 
     var
-      data1 = data[0]
-      data2 = data[1]
+      data1 =cast[ptr UncheckedArray[byte]](allocShared0(sizeof(byte) * BufferSize))
+      data2 = cast[ptr UncheckedArray[byte]](allocShared0(sizeof(byte) * BufferSize))
 
-    data[0].setLen(0)
-    data[1].setLen(0)
+    defer: 
+      deallocShared(data1)
+      deallocShared(data2)
+    
+    copyMem(data1,data[0], BufferSize)
+    copyMem(data2,data[1], BufferSize)
+    
+    data[0]=nil
+    data[1]=nil
 
-    decoder.decode(data, parity, recovered).tryGet()
+    decoder.decode(data, parity, recovered,DataCount,ParityCount,DataCount).tryGet()
 
-    check recovered[0] == data1
-    check recovered[1] == data2
+    check equalMem(recovered[0], data1, BufferSize)
+    check equalMem(recovered[1], data2, BufferSize)
 
   test "Test 1 data and 1 parity loss out of 4 possible":
     for i in 0..<DataCount:
-      data[i] = newSeq[byte](BufferSize)
-      recovered[i] = newSeq[byte](BufferSize)
-
       var
         str = TestString & " " & $i
 
       copyMem(addr data[i][0], addr str[0], str.len)
 
-    for i in 0..<ParityCount:
-      parity[i] = newSeq[byte](BufferSize)
+    encoder.encode(data, parity,DataCount,ParityCount).tryGet()
 
-    encoder.encode(data, parity).tryGet()
+    
+    var data1 = cast[ptr UncheckedArray[byte]](allocShared0(sizeof(byte) * BufferSize))
 
-    var
-      data1 = data[0]
+    defer: deallocShared(data1)
 
-    data[0].setLen(0)
-    parity[0].setLen(0)
+    copyMem(data1,data[0], BufferSize)
 
-    decoder.decode(data, parity, recovered).tryGet()
-    check recovered[0] == data1
+    data[0]=nil
+    parity[0]=nil
+
+    decoder.decode(data, parity, recovered,DataCount,ParityCount,DataCount).tryGet()
+
+    check equalMem(recovered[0], data1, BufferSize)
+
 
 suite "Leopard Encode/Decode":
   test "bufSize = 4096, K = 800, M = 200 - drop data = 200 data":
