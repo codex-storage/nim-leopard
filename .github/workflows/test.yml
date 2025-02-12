@@ -1,5 +1,7 @@
 name: Tests
-on: [push, pull_request]
+
+on: [push, pull_request, workflow_dispatch]
+
 jobs:
   test:
     strategy:
@@ -8,24 +10,21 @@ jobs:
           - {
             icon: 🐧,
             label: Linux,
-            os: ubuntu,
             runner: ubuntu-latest
           }
           - {
             icon: 🍎,
             label: macOS,
-            os: macos,
-            runner: macos-14-arm64
+            runner: macos-latest
           }
           - {
             icon: 🏁,
             label: Windows,
-            os: windows,
             runner: windows-latest
           }
         nim: [1.6.18]
     name: ${{ matrix.platform.icon }} ${{ matrix.platform.label }} - Nim v${{ matrix.nim }}
-    runs-on: ${{ matrix.platform.os }}-latest
+    runs-on: ${{ matrix.platform.runner }}
     defaults:
       run:
         shell: bash
@@ -33,7 +32,7 @@ jobs:
     - uses: actions/checkout@v4
       with:
         submodules: recursive
-    - uses: iffy/install-nim@v4
+    - uses: iffy/install-nim@v5
       with:
         version: ${{ matrix.nim }}
     - name: Install
